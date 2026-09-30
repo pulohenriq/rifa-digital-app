@@ -1,0 +1,239 @@
+/* =====================================================================
+   tema.css — identidade visual compartilhada
+   Paleta do cartaz do Encontro UMADEB 2K26, a mesma do sorteio original.
+   Usado pelas três páginas: comprador, painel e sorteio.
+   ===================================================================== */
+
+:root {
+  /* base */
+  --papel: #f4e6d8;          /* creme do cartaz: fundo */
+  --branco: #fffaf4;         /* branco quente: superfícies */
+  --tinta: #2e1512;          /* texto: marrom-vinho */
+  --tinta-suave: #7d5c53;
+  --vinho: #941b1d;          /* ação */
+  --vinho-escuro: #6a1314;   /* títulos, topo */
+  --salmao: #d18a7c;         /* detalhes */
+  --salmao-claro: #f7e3da;
+  --linha: #e7d3c3;
+  --linha-forte: #cfae99;
+  --erro: #b3402a;
+  --ok: #5b6e3f;
+  --ouro: #f0a839;           /* destaque do sorteio */
+
+  /* situação dos números */
+  --livre: #3d7444;
+  --livre-fundo: #e6f0df;
+  --sel: #f0a839;
+  --sel-borda: #c7841c;
+  --sel-tinta: #3a2204;
+  --reserva: #cf6a22;
+  --reserva-fundo: #fbe4d0;
+  --reserva-tinta: #86400f;
+  --pago: #941b1d;
+  --pago-tinta: #f8e2da;
+
+  /* tipografia */
+  --display: "Archivo", "Arial Narrow", Arial, sans-serif;
+  --texto: "Karla", Arial, sans-serif;
+
+  --sombra: 0 1px 2px rgba(106, 19, 20, .06), 0 10px 28px rgba(106, 19, 20, .08);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font: 400 1rem/1.5 var(--texto);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -.015em;
+  color: var(--vinho-escuro);
+}
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--vinho); }
+
+:focus-visible { outline: 3px solid var(--vinho); outline-offset: 2px; }
+
+.sr-only {
+  position: absolute !important; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; margin: -1px; padding: 0; border: 0;
+}
+
+/* ---------- Botões ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 12px 24px;
+  border: 2px solid transparent; border-radius: 999px;
+  font-family: var(--texto); font-weight: 700; font-size: 1rem; line-height: 1.2;
+  text-decoration: none; cursor: pointer;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.btn.primario { background: var(--vinho); border-color: var(--vinho); color: var(--branco); }
+.btn.primario:hover:not([disabled]) { background: var(--vinho-escuro); border-color: var(--vinho-escuro); }
+.btn.secundario { background: transparent; border-color: var(--vinho); color: var(--vinho); }
+.btn.secundario:hover:not([disabled]) { background: var(--salmao-claro); }
+.btn.whats { background: #1f7a4a; border-color: #1f7a4a; color: #fff; }
+.btn.cheio { width: 100%; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.btn.carregando { position: relative; color: transparent !important; pointer-events: none; }
+.btn.carregando::after {
+  content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%;
+  border: 3px solid rgba(255, 250, 244, .45); border-top-color: var(--branco);
+  animation: girar .8s linear infinite;
+}
+.btn.secundario.carregando::after { border-color: rgba(148, 27, 29, .3); border-top-color: var(--vinho); }
+@keyframes girar { to { transform: rotate(360deg); } }
+
+.btn-link {
+  background: none; border: 0; padding: 8px 4px; cursor: pointer;
+  color: var(--vinho); font-weight: 700; text-decoration: underline; text-underline-offset: 3px;
+}
+
+/* ---------- Campos ---------- */
+.campo { display: block; margin-top: 16px; }
+.campo > span { display: block; font-weight: 700; margin-bottom: 6px; }
+.campo > span small { font-weight: 400; color: var(--tinta-suave); }
+.campo input, .campo textarea, .campo select {
+  width: 100%; min-height: 48px; padding: 11px 14px;
+  background: var(--branco); border: 1.5px solid var(--linha-forte); border-radius: 10px;
+  font-size: 1rem;
+}
+.campo input:focus, .campo textarea:focus, .campo select:focus {
+  outline: none; border-color: var(--vinho); box-shadow: 0 0 0 3px rgba(148, 27, 29, .18);
+}
+.campo.invalido input { border-color: var(--erro); }
+.campo .dica-erro { display: block; margin-top: 4px; color: var(--erro); font-size: .9rem; font-weight: 700; }
+
+.erro { color: var(--erro); font-weight: 700; }
+.caixa-erro {
+  margin-top: 16px; padding: 12px 14px; border-radius: 10px;
+  background: #fbe4dc; color: var(--erro); font-weight: 700;
+}
+.nota { color: var(--tinta-suave); font-size: .9rem; }
+
+/* ---------- Avisos rápidos ---------- */
+.toasts {
+  position: fixed; z-index: 100; left: 50%; transform: translateX(-50%);
+  bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+  width: min(92vw, 460px); display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+}
+.toast {
+  background: var(--tinta); color: var(--branco); border-radius: 12px; padding: 12px 16px;
+  box-shadow: 0 10px 30px rgba(46, 21, 18, .3); font-weight: 500;
+  animation: toastEntra .22s ease-out both;
+}
+.toast.saindo { animation: toastSai .2s ease-in both; }
+@keyframes toastEntra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes toastSai { to { opacity: 0; transform: translateY(6px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* =====================================================================
+   Bilhetes (compartilhados pelas três páginas)
+   ===================================================================== */
+
+/* Legenda da situação dos números */
+.legenda { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .9rem; color: var(--tinta-suave); }
+.legenda li { display: inline-flex; align-items: center; gap: 6px; }
+.amostra { width: 26px; height: 17px; border-radius: 5px; border: 2px solid; display: inline-block; }
+.amostra.d { border-color: var(--livre); background: var(--branco); }
+.amostra.s { border-color: var(--sel-borda); background: var(--sel); }
+.amostra.r { border-color: var(--reserva); border-style: dashed; background: var(--reserva-fundo); }
+.amostra.p { border-color: var(--pago); background: var(--pago); }
+.amostra.meu { outline: 2px dashed var(--vinho-escuro); outline-offset: 2px; margin: 0 4px 0 3px; }
+
+/* Bilhete da grade: recortes laterais como no sorteio original */
+.bil {
+  --b: var(--livre); --f: var(--branco); --t: var(--livre);
+  position: relative; height: 48px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--f); color: var(--t); border: 2px solid var(--b); border-radius: 9px;
+  font: 800 1.05rem/1 var(--display); font-stretch: 112%; font-variant-numeric: tabular-nums;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: transform .12s ease, background-color .12s, box-shadow .12s;
+}
+/* recortes laterais do bilhete */
+.bil::before, .bil::after {
+  content: ""; position: absolute; top: 50%; width: 12px; height: 12px; margin-top: -6px;
+  border-radius: 50%; background: var(--papel); border: 2px solid var(--b);
+}
+.bil::before { left: -7px; clip-path: inset(0 0 0 50%); }
+.bil::after { right: -7px; clip-path: inset(0 50% 0 0); }
+
+@media (hover: hover) { .bil.d:hover { --f: var(--livre-fundo); } }
+.bil.s {
+  --b: var(--sel-borda); --f: var(--sel); --t: var(--sel-tinta);
+  transform: translateY(-3px); box-shadow: 0 4px 0 -1px rgba(106, 19, 20, .28);
+}
+.bil.r { --b: var(--reserva); --f: var(--reserva-fundo); --t: var(--reserva-tinta); border-style: dashed; cursor: default; }
+.bil.p {
+  --b: var(--pago); --f: var(--pago); --t: var(--pago-tinta); cursor: default;
+  background-image: repeating-linear-gradient(135deg, rgba(255, 250, 244, .1) 0 3px, transparent 3px 8px);
+}
+.bil.x { --b: var(--linha-forte); --f: transparent; --t: var(--tinta-suave); opacity: .55; text-decoration: line-through; cursor: default; }
+.bil.meu { outline: 2px dashed var(--vinho-escuro); outline-offset: 3px; }
+.bil.piscar { animation: piscar 1.4s ease-out; }
+@keyframes piscar { 0%, 40% { box-shadow: 0 0 0 6px rgba(240, 168, 57, .7); } 100% { box-shadow: 0 0 0 0 rgba(240, 168, 57, 0); } }
+
+/* Bilhete pequeno (listas de números) */
+.linha-bilhetes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.mini {
+  padding: 5px 9px; border-radius: 7px; border: 2px solid var(--vinho); color: var(--vinho);
+  background: var(--branco); font: 800 .95rem/1 var(--display); font-variant-numeric: tabular-nums;
+}
+.mini.pago { background: var(--vinho); color: var(--pago-tinta); }
+
+/* Bilhete com canhoto (palco e resultado do sorteio) */
+.tk {
+  --fundo-tk: var(--branco);
+  display: grid; grid-template-columns: var(--stub, 6.5rem) 1fr; height: 100%;
+  background: var(--branco); color: var(--tinta); border-radius: 12px; text-align: left;
+  box-shadow: 0 1px 2px rgba(106, 19, 20, .08);
+}
+.tk-num {
+  position: relative; background: var(--salmao-claro); color: var(--vinho-escuro); border-radius: 12px 0 0 12px;
+  border-right: 2px dashed var(--linha-forte); display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-weight: 800; font-stretch: 112%; font-variant-numeric: tabular-nums;
+  font-size: var(--num-size, 2rem); letter-spacing: -.01em;
+}
+.tk-num::before, .tk-num::after {
+  content: ""; position: absolute; right: -10px; width: 18px; height: 18px; border-radius: 50%; background: var(--fundo-tk);
+}
+.tk-num::before { top: -9px; }
+.tk-num::after { bottom: -9px; }
+.tk-corpo { padding: 0 18px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.tk-nome { font-family: var(--display); font-weight: 700; font-size: var(--nome-size, 1.5rem); line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-cong { font-size: var(--cong-size, 1.05rem); color: var(--tinta-suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.tk-cong .sem { font-style: italic; opacity: .8; }
+.tk.so-numero { grid-template-columns: 1fr; place-items: center; position: relative; overflow: hidden; }
+.tk.so-numero::before, .tk.so-numero::after {
+  content: ""; position: absolute; top: 50%; width: 22px; height: 22px; margin-top: -11px; border-radius: 50%; background: var(--fundo-tk);
+}
+.tk.so-numero::before { left: -11px; }
+.tk.so-numero::after { right: -11px; }
+.tk-so-num {
+  font-family: var(--display); font-weight: 800; font-stretch: 122%; font-variant-numeric: tabular-nums;
+  font-size: var(--so-num-size, 2.6rem); letter-spacing: -.01em; color: var(--vinho-escuro); line-height: 1;
+}
+
+/* ---------- Cartão de login (painel e sorteio) ---------- */
+.login {
+  max-width: 420px; margin: 8vh auto 40px; padding: 30px 26px;
+  background: var(--branco); border: 1px solid var(--linha); border-radius: 18px; box-shadow: var(--sombra);
+}
+.login h1 { font-size: 1.8rem; }
+.login p { margin-top: 8px; color: var(--tinta-suave); }
+.login .btn { margin-top: 22px; }

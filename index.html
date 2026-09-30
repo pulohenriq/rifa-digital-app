@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#6a1314">
+<title>Rifa</title>
+<meta name="description" content="Escolha seus números, pague com Pix e acompanhe seu pedido.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎟️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..900&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/tema.css">
+<link rel="stylesheet" href="assets/css/comprador.css">
+</head>
+<body>
+
+<header class="topo">
+  <span class="topo-nome" id="topoNome">Rifa</span>
+  <nav class="topo-acoes">
+    <button type="button" class="topo-btn" id="btnMeusPedidos" hidden>Meus pedidos</button>
+    <a class="topo-btn" id="lnkWhats" target="_blank" rel="noopener" hidden>Falar com a organização</a>
+  </nav>
+</header>
+
+<main>
+  <!-- Carregando / falha -->
+  <section class="estado" id="telaCarregando">
+    <div class="estado-bilhete" aria-hidden="true"></div>
+    <p>Carregando os números…</p>
+  </section>
+  <section class="estado" id="telaFalha" hidden>
+    <h1>Não foi possível abrir a rifa</h1>
+    <p id="falhaTexto"></p>
+    <button type="button" class="btn primario" id="btnTentar">Tentar de novo</button>
+  </section>
+
+  <div id="app" hidden>
+    <!-- Pedido em andamento neste aparelho -->
+    <div class="aviso-pedido" id="avisoPedido" hidden>
+      <p id="avisoTexto"></p>
+      <button type="button" class="btn primario" id="btnAvisoAbrir">Continuar</button>
+    </div>
+
+    <section class="abertura">
+      <h1 id="nomeRifa"></h1>
+      <p class="abertura-desc" id="descRifa"></p>
+
+      <div class="abertura-linha">
+        <div class="canhoto">
+          <strong id="preco"></strong>
+          <span>por número</span>
+        </div>
+        <div class="progresso">
+          <p id="progTexto"></p>
+          <div class="progresso-trilho" aria-hidden="true">
+            <span class="progresso-pago" id="progPago"></span><span class="progresso-reserva" id="progReserva"></span>
+          </div>
+        </div>
+      </div>
+
+      <p class="faixa-fechada" id="faixaFechada" hidden></p>
+      <button type="button" class="btn-link compartilhar" id="btnCompartilhar">Compartilhar a rifa</button>
+    </section>
+
+    <div class="colunas">
+      <section class="escolha" aria-labelledby="tituloEscolha">
+        <div class="escolha-cab">
+          <h2 id="tituloEscolha">Escolha seus números</h2>
+          <ul class="legenda" aria-label="Legenda">
+            <li><span class="amostra d"></span>Livre</li>
+            <li><span class="amostra s"></span>Selecionado</li>
+            <li><span class="amostra r"></span>Reservado</li>
+            <li><span class="amostra p"></span>Pago</li>
+            <li id="legendaMeu" hidden><span class="amostra d meu"></span>Seu pedido</li>
+          </ul>
+        </div>
+
+        <div class="ferramentas">
+          <label class="ir-para">
+            <span class="sr-only">Ir para o número</span>
+            <input type="number" id="irPara" inputmode="numeric" placeholder="Ir para o número">
+          </label>
+          <label class="alternar">
+            <input type="checkbox" id="soLivres">
+            <span>Só os livres</span>
+          </label>
+          <div class="sorte">
+            <span id="rotuloSorte" class="sr-only">Quantos números escolher ao acaso</span>
+            <div class="contador" role="group" aria-labelledby="rotuloSorte">
+              <button type="button" id="sorteMenos" aria-label="Menos um">−</button>
+              <output id="sorteQtd">1</output>
+              <button type="button" id="sorteMais" aria-label="Mais um">+</button>
+            </div>
+            <button type="button" class="btn secundario" id="btnSorte">Escolher 1 para mim</button>
+          </div>
+        </div>
+
+        <p class="atualizacao" id="atualizacao" aria-live="polite"></p>
+        <div class="grade" id="grade" role="group" aria-label="Números da rifa"></div>
+        <p class="grade-vazia" id="gradeVazia" hidden>Não há números livres no momento. Reservas não pagas voltam para a venda quando o prazo acaba.</p>
+      </section>
+
+      <aside class="carrinho" id="carrinho" aria-labelledby="tituloCarrinho">
+        <div class="carrinho-resumo">
+          <button type="button" class="carrinho-abrir" id="btnCarrinhoAbrir" aria-expanded="false" aria-controls="carrinhoDetalhe">
+            <span id="carrinhoQtd">Nenhum número escolhido</span>
+            <strong id="carrinhoTotal">R$ 0,00</strong>
+          </button>
+          <button type="button" class="btn primario" id="btnReservar" disabled>Reservar</button>
+        </div>
+        <div class="carrinho-detalhe" id="carrinhoDetalhe">
+          <h2 id="tituloCarrinho">Seus números</h2>
+          <p class="carrinho-vazio" id="carrinhoVazio">Toque nos números livres para escolher.</p>
+          <ul class="chips" id="chips"></ul>
+          <button type="button" class="btn-link" id="btnLimpar" hidden>Limpar seleção</button>
+          <p class="nota" id="notaReserva"></p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<footer class="rodape" id="rodape" hidden>
+  <p>O sorteio considera somente os números com pagamento confirmado pela organização.</p>
+</footer>
+
+<!-- ===== Checkout ===== -->
+<dialog class="painel" id="checkout" aria-labelledby="ckTitulo">
+  <div class="painel-cab">
+    <ol class="passos" id="passos">
+      <li data-passo="1"><span>1</span>Seus dados</li>
+      <li data-passo="2"><span>2</span>Pagamento</li>
+      <li data-passo="3"><span>3</span>Comprovante</li>
+    </ol>
+    <button type="button" class="fechar" id="ckFechar" aria-label="Fechar">×</button>
+  </div>
+
+  <div class="painel-corpo">
+    <!-- 1. Dados -->
+    <form data-etapa="dados" id="formDados" novalidate>
+      <h2 id="ckTitulo">Seus dados</h2>
+      <div class="resumo-sel" id="ckResumo"></div>
+      <label class="campo" id="cNome"><span>Nome completo</span>
+        <input id="fNome" autocomplete="name" maxlength="80" required></label>
+      <label class="campo" id="cTel"><span>WhatsApp com DDD</span>
+        <input id="fTel" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(61) 99999-8888" required></label>
+      <label class="campo" id="cEmail"><span>E-mail <small id="fEmailOpc">(opcional)</small></span>
+        <input id="fEmail" type="email" autocomplete="email" maxlength="120"></label>
+      <label class="campo" id="cCong"><span>Congregação <small>(opcional)</small></span>
+        <input id="fCong" maxlength="80" autocomplete="off"></label>
+      <div class="caixa-erro" id="ckErro" role="alert" hidden></div>
+      <button type="submit" class="btn primario cheio acao" id="btnConfirmar">Reservar e ver o Pix</button>
+      <p class="nota centro">Seus dados são usados só para falar com você sobre esta rifa.</p>
+    </form>
+
+    <!-- 2. Pix -->
+    <section data-etapa="pix" hidden>
+      <h2>Pague com Pix</h2>
+      <div class="pix-valor"><span>Valor</span><strong id="pxValor"></strong></div>
+
+      <div class="relogio" id="pxRelogio">
+        <div class="relogio-trilho" aria-hidden="true"><span id="pxBarra"></span></div>
+        <p><strong id="pxTempo">--:--</strong> para pagar. Depois disso, os números voltam para a venda.</p>
+      </div>
+
+      <div class="pix-qr">
+        <canvas id="pxQr" role="img" aria-label="QR Code do Pix"></canvas>
+        <img id="pxQrImg" alt="QR Code do Pix" hidden>
+      </div>
+
+      <label class="campo"><span>Pix copia e cola</span>
+        <textarea id="pxCodigo" rows="4" readonly></textarea></label>
+      <button type="button" class="btn primario cheio acao" id="btnCopiarCodigo">Copiar código Pix</button>
+
+      <dl class="pix-dados">
+        <div><dt>Chave Pix</dt><dd><span id="pxChave"></span> <button type="button" class="btn-link" id="btnCopiarChave">Copiar</button></dd></div>
+        <div><dt>Recebedor</dt><dd id="pxRecebedor"></dd></div>
+        <div><dt>Seus números</dt><dd id="pxNumeros"></dd></div>
+        <div><dt>Pedido</dt><dd id="pxPedido"></dd></div>
+      </dl>
+
+      <ol class="como">
+        <li>No app do banco, escolha <strong>Pix copia e cola</strong> ou leia o QR Code.</li>
+        <li>Confira o valor e o nome do recebedor antes de pagar.</li>
+        <li>Depois de pagar, envie o comprovante por aqui.</li>
+      </ol>
+
+      <button type="button" class="btn secundario cheio acao" id="btnIrComprovante">Já paguei, enviar comprovante</button>
+      <div class="guardar-link">
+        <p>Guarde o link do seu pedido para voltar a ele de outro aparelho.</p>
+        <button type="button" class="btn-link" data-copiar-link>Copiar link do pedido</button>
+      </div>
+    </section>
+
+    <!-- 3. Comprovante -->
+    <section data-etapa="comprovante" hidden>
+      <h2>Envie o comprovante</h2>
+      <p id="cpTexto">Uma foto ou print da tela do comprovante do Pix. Pode ser imagem ou PDF.</p>
+      <label class="anexo" id="cpAnexo">
+        <input type="file" id="cpArquivo" accept="image/*,application/pdf,.heic,.heif" class="sr-only">
+        <span class="anexo-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        </span>
+        <span id="cpRotulo">Escolher foto ou PDF</span>
+      </label>
+      <div class="previa" id="cpPrevia" hidden>
+        <img id="cpImg" alt="Prévia do comprovante" hidden>
+        <p id="cpInfo"></p>
+      </div>
+      <div class="caixa-erro" id="cpErro" role="alert" hidden></div>
+      <button type="button" class="btn primario cheio acao" id="btnEnviar" disabled>Enviar comprovante</button>
+      <button type="button" class="btn-link voltar" id="btnVoltarPix">Voltar ao Pix</button>
+    </section>
+
+    <!-- Situações finais -->
+    <section data-etapa="final" hidden>
+      <div class="final" id="finalBox"></div>
+    </section>
+  </div>
+</dialog>
+
+<!-- ===== Meus pedidos ===== -->
+<dialog class="painel estreito" id="dlgPedidos" aria-labelledby="mpTitulo">
+  <div class="painel-cab">
+    <h2 id="mpTitulo">Meus pedidos</h2>
+    <button type="button" class="fechar" id="mpFechar" aria-label="Fechar">×</button>
+  </div>
+  <div class="painel-corpo">
+    <p class="nota">Pedidos feitos neste aparelho.</p>
+    <ul class="lista-pedidos" id="mpLista"></ul>
+  </div>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/vendor/qrcode.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/comprador.js"></script>
+</body>
+</html>

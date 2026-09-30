@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#6a1314">
+<title>Sorteio da rifa</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎟️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..900&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/tema.css">
+<link rel="stylesheet" href="assets/css/sorteio.css">
+</head>
+<body>
+
+<!-- ===== Abertura em tela cheia (telão) ===== -->
+<div class="telao" id="telao" hidden>
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="telao-conteudo">
+    <span class="selo-telao" id="telaoSelo">Sorteio ao vivo</span>
+    <h1 id="telaoTitulo"><em>Rifa</em><span></span><b></b></h1>
+    <button type="button" class="btn-iniciar" id="btnIniciar">Iniciar</button>
+  </div>
+</div>
+
+<header class="app-topo">
+  <a class="topo-voltar" href="admin.html">← Painel</a>
+  <h2 id="topoTitulo">Sorteio da rifa</h2>
+</header>
+
+<main class="container">
+
+  <!-- ===== Login ===== -->
+  <section id="telaLogin" hidden>
+    <form class="login" id="formLogin" novalidate>
+      <h1>Sorteio</h1>
+      <p>Entre com a senha da tesouraria. A lista de participantes só inclui os números com pagamento confirmado.</p>
+      <label class="campo"><span>Seu nome</span><input id="lgNome" autocomplete="name" maxlength="40"></label>
+      <label class="campo"><span>Senha</span><input id="lgSenha" type="password" autocomplete="current-password"></label>
+      <div class="caixa-erro" id="lgErro" role="alert" hidden></div>
+      <button type="submit" class="btn primario cheio" id="lgBotao">Entrar</button>
+      <div class="copia-offline" id="loginCopia" hidden>
+        <p id="loginCopiaTexto"></p>
+        <button type="button" class="btn secundario cheio" id="btnUsarCopiaLogin">Sortear com a cópia salva</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ===== Carregando / falha ===== -->
+  <section class="folha estado" id="telaCarregando" hidden>
+    <p id="carregandoTexto">Buscando os números pagos…</p>
+  </section>
+  <section class="folha estado" id="telaFalha" hidden>
+    <h1>Não foi possível buscar a lista</h1>
+    <p id="falhaTexto"></p>
+    <div class="acoes-falha">
+      <button type="button" class="btn primario" id="btnTentar">Tentar de novo</button>
+      <button type="button" class="btn secundario" id="btnUsarCopia" hidden>Usar a cópia salva</button>
+    </div>
+  </section>
+
+  <!-- ===== Regras ===== -->
+  <section class="folha larga" id="telaRegras" hidden>
+    <div class="faixa" id="retomar" hidden>
+      <span id="retomarTexto"></span>
+      <span>
+        <button type="button" class="pilula" id="btnRetomar">Retomar sorteio</button>
+        <button type="button" class="pilula perigo" id="btnZerar">Começar do zero</button>
+      </span>
+    </div>
+
+    <input type="text" id="titulo" aria-label="Título do sorteio" maxlength="90">
+
+    <div class="participantes" id="participantes">
+      <div class="participantes-cab">
+        <div>
+          <p class="concorrem" id="concorrem"></p>
+          <p class="nota" id="listaInfo"></p>
+        </div>
+        <button type="button" class="pilula" id="btnAtualizarLista">Atualizar lista</button>
+      </div>
+      <p class="impressao" id="impressao"></p>
+      <div id="listaAvisos"></div>
+      <details class="ver-lista">
+        <summary>Ver os participantes</summary>
+        <div class="rolagem"><table class="tab" id="tabParticipantes"></table></div>
+      </details>
+    </div>
+
+    <h2>Regras do sorteio</h2>
+    <div class="regras">
+      <div class="regra">
+        <div><strong>Vencedores</strong><span class="desc">Quantos números serão sorteados.</span></div>
+        <div class="stepper" data-campo="vencedores" data-min="1" data-max="50">
+          <button type="button" data-d="-1" aria-label="Menos um vencedor">−</button><output>1</output><button type="button" data-d="1" aria-label="Mais um vencedor">+</button>
+        </div>
+      </div>
+      <div class="regra">
+        <div><strong>Suplentes</strong><span class="desc">Reservas para o caso de um vencedor não estar presente ou não cumprir as regras.</span></div>
+        <div class="stepper" data-campo="suplentes" data-min="0" data-max="20">
+          <button type="button" data-d="-1" aria-label="Menos um suplente">−</button><output>0</output><button type="button" data-d="1" aria-label="Mais um suplente">+</button>
+        </div>
+      </div>
+      <div class="regra">
+        <div><strong>Um prêmio por comprador</strong><span class="desc">Quem já ganhou não concorre de novo, mesmo tendo vários números.</span></div>
+        <label class="switch"><input type="checkbox" id="unico"><span class="slider"></span><span class="sr-only">Um prêmio por comprador</span></label>
+      </div>
+      <div class="regra">
+        <div><strong>Prêmios</strong><span class="desc">Dê um nome a cada sorteio, na ordem em que eles acontecem.</span></div>
+        <label class="switch"><input type="checkbox" id="usaPremios"><span class="slider"></span><span class="sr-only">Definir prêmios</span></label>
+        <div class="extra" id="boxPremios" hidden>
+          <label for="premios" class="sr-only">Prêmios, um por linha</label>
+          <textarea id="premios" placeholder="Um prêmio por linha, na ordem do sorteio.&#10;Ex.: Cesta de café da manhã"></textarea>
+        </div>
+      </div>
+      <div class="regra">
+        <div><strong>Estilo da animação</strong><span class="desc">Como o número sorteado aparece na tela.</span></div>
+        <div class="estilos" id="estilos">
+          <button type="button" class="estilo-btn" data-estilo="fita" aria-pressed="true">Fita giratória</button>
+          <button type="button" class="estilo-btn" data-estilo="contagem" aria-pressed="false">Contagem regressiva</button>
+          <button type="button" class="estilo-btn" data-estilo="roleta" aria-pressed="false">Roleta</button>
+        </div>
+      </div>
+      <div class="regra">
+        <div><strong>Duração da animação</strong><span class="desc">Em segundos, por sorteio.</span></div>
+        <div class="stepper" data-campo="duracao" data-min="3" data-max="60">
+          <button type="button" data-d="-1" aria-label="Menos um segundo">−</button><output>10</output><button type="button" data-d="1" aria-label="Mais um segundo">+</button>
+        </div>
+      </div>
+      <div class="regra">
+        <div><strong>Cor de destaque</strong><span class="desc">Moldura do número sorteado e botão.</span></div>
+        <div class="cores" id="cores"></div>
+      </div>
+    </div>
+
+    <p class="concorrem" id="concorremRodape"></p>
+    <button type="button" class="btn primario cheio" id="btnIrSorteio">Ir para o sorteio</button>
+  </section>
+
+  <!-- ===== Palco ===== -->
+  <section class="palco" id="telaPalco" hidden>
+    <div class="palco-topo">
+      <h1 id="palcoTitulo"></h1>
+      <span>
+        <button type="button" class="pilula" id="btnTelaCheia">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+          Tela cheia
+        </button>
+        <button type="button" class="pilula" id="btnVoltar">Voltar às regras</button>
+      </span>
+    </div>
+
+    <div class="palco-grade">
+      <div>
+        <div class="rodada">
+          <h2 id="rodadaTitulo"></h2>
+          <p id="rodadaSub"></p>
+        </div>
+        <div class="reel parado" id="reel" aria-hidden="true">
+          <div class="janela"><div class="fita" id="fita"></div></div>
+          <div class="foco"></div>
+        </div>
+        <div class="contagem" id="contagemBox">
+          <div class="contagem-anel">
+            <svg viewBox="0 0 120 120"><circle class="fundo" cx="60" cy="60" r="52"></circle><circle class="prog" id="contagemProg" cx="60" cy="60" r="52"></circle></svg>
+            <span class="contagem-num" id="contagemNum">10</span>
+          </div>
+          <div class="contagem-resultado" id="contagemResultado"></div>
+        </div>
+        <div class="roleta" id="roletaBox">
+          <div class="roleta-caixa">
+            <div class="roleta-ponteiro"></div>
+            <svg class="roleta-svg" id="roletaSvg" viewBox="0 0 300 300"></svg>
+          </div>
+          <div class="roleta-resultado" id="roletaResultado"></div>
+        </div>
+        <div class="acoes">
+          <button type="button" class="btn sortear" id="btnSortear">Sortear</button>
+          <span class="concorrendo" id="concorrendo"></span>
+        </div>
+        <p class="sr-only" id="anuncio" aria-live="assertive"></p>
+      </div>
+
+      <aside class="resultado">
+        <h2>Resultado</h2>
+        <p class="res-vazio" id="resVazio">Nenhum número sorteado ainda. O resultado aparece aqui, na ordem do sorteio.</p>
+        <ol class="res-lista" id="resLista"></ol>
+        <p class="nota res-registro" id="resRegistro"></p>
+        <div class="res-acoes" id="resAcoes" hidden>
+          <button type="button" class="pilula" id="btnCopiar">Copiar resultado</button>
+          <button type="button" class="pilula" id="btnCsv">Baixar CSV</button>
+          <button type="button" class="pilula perigo" id="btnAnular">Anular último sorteio</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<!-- ===== Comemoração do ganhador ===== -->
+<div class="festa" id="festa" hidden>
+  <div class="raios" aria-hidden="true"></div>
+  <canvas id="confetes" aria-hidden="true"></canvas>
+  <div class="festa-caixa" role="dialog" aria-live="assertive" aria-label="Resultado do sorteio">
+    <span class="festa-premio" id="festaPremio">1º prêmio</span>
+    <p class="festa-chamada" id="festaChamada">Parabéns!</p>
+    <p class="festa-rotulo">Número sorteado</p>
+    <div class="festa-num" id="festaNum">0000</div>
+    <p class="festa-rotulo" id="festaRotuloNome">Comprador</p>
+    <p class="festa-nome" id="festaNome">—</p>
+    <p class="festa-cong" id="festaCong"></p>
+    <div class="festa-acoes">
+      <button type="button" class="btn-iniciar" id="festaProximo">Sortear o próximo</button>
+      <button type="button" class="pilula clara" id="festaFechar">Voltar ao palco</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/sessao.js"></script>
+<script src="assets/js/sorteio.js"></script>
+</body>
+</html>

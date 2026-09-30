@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#6a1314">
+<title>Painel da rifa</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧾</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..900&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/tema.css">
+<link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+
+<!-- ===== Login ===== -->
+<main id="telaLogin" hidden>
+  <form class="login" id="formLogin" novalidate>
+    <h1>Painel da rifa</h1>
+    <p>Área da tesouraria. Seu nome fica registrado em cada ação, para a conferência depois.</p>
+    <label class="campo"><span>Seu nome</span><input id="lgNome" autocomplete="name" maxlength="40"></label>
+    <label class="campo"><span>Senha</span><input id="lgSenha" type="password" autocomplete="current-password"></label>
+    <div class="caixa-erro" id="lgErro" role="alert" hidden></div>
+    <button type="submit" class="btn primario cheio" id="lgBotao">Entrar</button>
+  </form>
+</main>
+
+<!-- ===== Painel ===== -->
+<div id="telaPainel" hidden>
+  <header class="topo">
+    <div class="topo-titulo">
+      <strong id="topoRifa">Painel da rifa</strong>
+      <span id="topoUsuario"></span>
+    </div>
+    <nav class="topo-links">
+      <a href="index.html" target="_blank" rel="noopener">Ver o site</a>
+      <a href="sorteio.html">Abrir o sorteio</a>
+      <button type="button" id="btnSair">Sair</button>
+    </nav>
+  </header>
+
+  <nav class="abas" role="tablist" aria-label="Seções do painel">
+    <button type="button" role="tab" id="abaResumo" aria-controls="secResumo" aria-selected="true">Resumo</button>
+    <button type="button" role="tab" id="abaPedidos" aria-controls="secPedidos" aria-selected="false">Pedidos <span class="contagem-aba" id="badgeConferir" hidden></span></button>
+    <button type="button" role="tab" id="abaNumeros" aria-controls="secNumeros" aria-selected="false">Números</button>
+  </nav>
+
+  <main class="conteudo">
+    <!-- Resumo -->
+    <section id="secResumo" role="tabpanel" aria-labelledby="abaResumo">
+      <div class="caixa-alertas" id="alertasConfig"></div>
+
+      <div class="caixa-valores">
+        <div class="valor destaque"><span>Arrecadado (confirmado)</span><strong id="vArrecadado">–</strong><small id="vPagantes"></small></div>
+        <button type="button" class="valor acao-valor" id="vConferirBtn"><span>Comprovantes para conferir</span><strong id="vConferir">–</strong><small id="vConferirQtd"></small></button>
+        <div class="valor"><span>Aguardando pagamento</span><strong id="vAguardando">–</strong><small id="vAguardandoQtd"></small></div>
+      </div>
+
+      <div class="bloco">
+        <h2>Números</h2>
+        <p class="progresso-texto" id="nTexto"></p>
+        <div class="barra-numeros" aria-hidden="true"><span class="bp" id="nBarraP"></span><span class="br" id="nBarraR"></span></div>
+        <ul class="legenda legenda-resumo">
+          <li><span class="amostra p"></span><strong id="nPagos">–</strong>&nbsp;pagos</li>
+          <li><span class="amostra r"></span><strong id="nReservados">–</strong>&nbsp;reservados</li>
+          <li><span class="amostra d"></span><strong id="nLivres">–</strong>&nbsp;livres</li>
+          <li><span class="amostra x-fora"></span><strong id="nFora">–</strong>&nbsp;fora de venda</li>
+        </ul>
+      </div>
+
+      <div class="bloco">
+        <h2>Manutenção</h2>
+        <div class="manutencao">
+          <div>
+            <p><strong>Liberar reservas vencidas</strong></p>
+            <p class="nota" id="mExpirados">O sistema faz isso sozinho a cada 5 minutos.</p>
+          </div>
+          <button type="button" class="btn secundario" id="btnLiberar">Liberar agora</button>
+        </div>
+        <div class="manutencao">
+          <div>
+            <p><strong>Aplicar mudanças da aba CONFIG</strong></p>
+            <p class="nota">Alterações na planilha valem em até 1 minuto. Use para valer na hora.</p>
+          </div>
+          <button type="button" class="btn secundario" id="btnCache">Aplicar agora</button>
+        </div>
+      </div>
+      <p class="nota atualizado" id="resumoAtualizado"></p>
+    </section>
+
+    <!-- Pedidos -->
+    <section id="secPedidos" role="tabpanel" aria-labelledby="abaPedidos" hidden>
+      <div class="filtros" role="group" aria-label="Filtrar pedidos">
+        <button type="button" data-filtro="COMPROVANTE_ENVIADO" aria-pressed="true">Para conferir</button>
+        <button type="button" data-filtro="AGUARDANDO_PAGAMENTO" aria-pressed="false">Aguardando pagamento</button>
+        <button type="button" data-filtro="PAGAMENTO_CONFIRMADO" aria-pressed="false">Confirmados</button>
+        <button type="button" data-filtro="EXPIRADO" aria-pressed="false">Prazo encerrado</button>
+        <button type="button" data-filtro="CANCELADO" aria-pressed="false">Cancelados</button>
+        <button type="button" data-filtro="" aria-pressed="false">Todos</button>
+      </div>
+      <div class="busca">
+        <label class="sr-only" for="busca">Buscar pedido</label>
+        <input type="search" id="busca" placeholder="Buscar por nome, telefone, número ou código do pedido">
+      </div>
+      <p class="nota" id="pedidosInfo"></p>
+      <ul class="pedidos" id="listaPedidos"></ul>
+    </section>
+
+    <!-- Números -->
+    <section id="secNumeros" role="tabpanel" aria-labelledby="abaNumeros" hidden>
+      <p class="apoio">Toque nos números <strong>livres</strong> para registrar uma venda presencial ou tirar da venda. Toque nos <strong>fora de venda</strong> para devolver. Em um número reservado ou pago, você vê o pedido.</p>
+      <ul class="legenda">
+        <li><span class="amostra d"></span>Livre</li>
+        <li><span class="amostra s"></span>Selecionado</li>
+        <li><span class="amostra r"></span>Reservado</li>
+        <li><span class="amostra p"></span>Pago</li>
+        <li><span class="amostra x-fora"></span>Fora de venda</li>
+      </ul>
+      <div class="grade compacta" id="gradeAdmin" role="group" aria-label="Números da rifa"></div>
+    </section>
+  </main>
+
+  <!-- barra de seleção da aba Números -->
+  <div class="barra-selecao" id="barraSel" hidden>
+    <p id="selTexto"></p>
+    <div class="barra-acoes">
+      <button type="button" class="btn primario" id="btnVendaManual">Registrar venda</button>
+      <button type="button" class="btn secundario" id="btnBloquear">Tirar da venda</button>
+      <button type="button" class="btn secundario" id="btnDesbloquear">Devolver para a venda</button>
+      <button type="button" class="btn-link" id="btnLimparSel">Limpar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Janela de ação (confirmar, recusar, cancelar, venda, bloqueio) ===== -->
+<dialog class="janela" id="dlgAcao" aria-labelledby="acTitulo">
+  <form method="dialog" id="formAcao" novalidate>
+    <div class="janela-cab">
+      <h2 id="acTitulo"></h2>
+      <button type="button" class="fechar" data-fechar aria-label="Fechar">×</button>
+    </div>
+    <div class="janela-corpo" id="acCorpo"></div>
+    <div class="caixa-erro" id="acErro" role="alert" hidden></div>
+    <div class="janela-rodape">
+      <button type="button" class="btn-link" data-fechar>Voltar</button>
+      <button type="submit" class="btn primario" id="acConfirmar"></button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/sessao.js"></script>
+<script src="assets/js/admin.js"></script>
+</body>
+</html>
