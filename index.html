@@ -6,17 +6,27 @@
 <meta name="theme-color" content="#6a1314">
 <title>Rifa</title>
 <meta name="description" content="Escolha seus números, pague com Pix e acompanhe seu pedido.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎟️</text></svg>">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-2 -8 44 44'%3E%3Cpath fill='%236a1314' d='M6 1h4a2.5 2.5 0 0 0 5 0h19a5 5 0 0 1 5 5v16a5 5 0 0 1-5 5H15a2.5 2.5 0 0 0-5 0H6a5 5 0 0 1-5-5V6a5 5 0 0 1 5-5Z'/%3E%3Cpath fill='%23f0a839' d='M26 7.5l1.6 4.9 4.9 1.6-4.9 1.6L26 20.5l-1.6-4.9-4.9-1.6 4.9-1.6Z'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..900&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- fontes carregadas sem bloquear a primeira pintura da página -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,700..900&family=Karla:wght@400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,700..900&family=Karla:wght@400;500;700&display=swap"></noscript>
 <link rel="stylesheet" href="assets/css/tema.css">
 <link rel="stylesheet" href="assets/css/comprador.css">
 </head>
 <body>
 
 <header class="topo">
-  <span class="topo-nome" id="topoNome">Rifa</span>
+  <a class="marca" href="./" aria-label="Rifa Digital, página inicial">
+    <svg class="marca-simbolo" viewBox="0 0 40 28" aria-hidden="true">
+      <path class="ms-bilhete" d="M6 1h4a2.5 2.5 0 0 0 5 0h19a5 5 0 0 1 5 5v16a5 5 0 0 1-5 5H15a2.5 2.5 0 0 0-5 0H6a5 5 0 0 1-5-5V6a5 5 0 0 1 5-5Z"/>
+      <path class="ms-canhoto" d="M6 1h4a2.5 2.5 0 0 0 2.5 2.5v21A2.5 2.5 0 0 0 10 27H6a5 5 0 0 1-5-5V6a5 5 0 0 1 5-5Z"/>
+      <path class="ms-picote" d="M12.5 6.5v15"/>
+      <path class="ms-estrela" d="M26 7.5l1.6 4.9 4.9 1.6-4.9 1.6L26 20.5l-1.6-4.9-4.9-1.6 4.9-1.6Z"/>
+    </svg>
+    <span class="marca-nome"><b>Rifa</b>Digital</span>
+  </a>
   <nav class="topo-acoes">
     <button type="button" class="topo-btn" id="btnMeusPedidos" hidden>Meus pedidos</button>
     <a class="topo-btn" id="lnkWhats" target="_blank" rel="noopener" hidden>Falar com a organização</a>
@@ -25,9 +35,14 @@
 
 <main>
   <!-- Carregando / falha -->
-  <section class="estado" id="telaCarregando">
-    <div class="estado-bilhete" aria-hidden="true"></div>
-    <p>Carregando os números…</p>
+  <section class="carregando" id="telaCarregando" role="status" aria-live="polite">
+    <div class="cg-bilhete" aria-hidden="true">
+      <span class="cg-canhoto"><svg viewBox="0 0 24 24"><path d="M12 4.5l1.9 5.6 5.6 1.9-5.6 1.9L12 19.5l-1.9-5.6L4.5 12l5.6-1.9Z"/></svg></span>
+      <span class="cg-janela"><span class="cg-fita"><span>07</span><span>23</span><span>41</span><span>58</span><span>86</span><span>07</span></span></span>
+    </div>
+    <p class="cg-titulo" id="cgTitulo">Preparando sua rifa…</p>
+    <div class="cg-barra" aria-hidden="true"><span class="cg-progresso" id="cgProgresso"></span><span class="cg-brilho"></span></div>
+    <p class="cg-dica" id="cgDica"></p>
   </section>
   <section class="estado" id="telaFalha" hidden>
     <h1>Não foi possível abrir a rifa</h1>
@@ -58,6 +73,12 @@
           </div>
         </div>
       </div>
+
+      <ol class="como-funciona" aria-label="Como funciona">
+        <li><span>1</span>Escolha seus números na grade</li>
+        <li><span>2</span>Pague com Pix em poucos minutos</li>
+        <li><span>3</span>A organização confere e confirma</li>
+      </ol>
 
       <p class="faixa-fechada" id="faixaFechada" hidden></p>
       <button type="button" class="btn-link compartilhar" id="btnCompartilhar">Compartilhar a rifa</button>
@@ -234,9 +255,8 @@
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
-<script src="assets/js/config.js"></script>
-<script src="assets/js/vendor/qrcode.js"></script>
-<script src="assets/js/api.js"></script>
-<script src="assets/js/comprador.js"></script>
+<script src="assets/js/config.js" defer></script>
+<script src="assets/js/api.js" defer></script>
+<script src="assets/js/comprador.js" defer></script>
 </body>
 </html>
