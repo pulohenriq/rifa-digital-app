@@ -74,7 +74,8 @@
      ------------------------------------------------------------------ */
   const E = {
     cfg: null,
-    statusRifa: 'PAUSADA',
+    statusRifa: null,
+    versao: '', contagemTxt: '',
     ini: 0, fim: -1,
     letras: [], celulas: [],
     sel: new Set(),
@@ -87,6 +88,14 @@
     consultando: false,
     timers: {}
   };
+
+  /* elementos usados com frequência: buscados uma vez só */
+  const el = {};
+  ['grade', 'app', 'telaCarregando', 'cgProgresso', 'cgTitulo', 'cgDica', 'atualizacao', 'carrinho', 'carrinhoQtd',
+   'carrinhoTotal', 'btnReservar', 'btnCarrinhoAbrir', 'carrinhoVazio', 'btnLimpar', 'chips', 'progPago', 'progReserva',
+   'progTexto', 'gradeVazia', 'faixaFechada', 'avisoPedido', 'btnAvisoAbrir', 'btnMeusPedidos', 'legendaMeu',
+   'pxTempo', 'pxBarra', 'pxRelogio', 'soLivres'].forEach(id => { el[id] = document.getElementById(id); });
+  el.sorte = document.querySelector('.ferramentas .sorte');
 
   const agoraServidor = () => Date.now() + E.offset;
   function ajustarRelogio(iso) { const t = Date.parse(iso); if (t) E.offset = t - Date.now(); }
@@ -120,49 +129,130 @@
     const antes = E.meus;
     E.meus = new Set();
     lista.filter(x => ativo(x.status) || x.status === ST.CONFIRMADO).forEach(x => (x.numeros || []).forEach(n => E.meus.add(n)));
-    new Set([...antes, ...E.meus]).forEach(n => pintar(n - E.ini));
-    $('#btnMeusPedidos').hidden = !lista.length;
-    $('#legendaMeu').hidden = !E.meus.size;
-    atualizarAviso();
+    // repinta só os números que entraram ou saíram da lista "seus"
+    antes.forEach(n => { if (!E.meus.has(n)) pintar(n - E.ini); });
+    E.meus.forEach(n => { if (!antes.has(n)) pintar(n - E.ini); });
+    el.btnMeusPedidos.hidden = !lista.length;
+    el.legendaMeu.hidden = !E.meus.size;
+    atualizarAviso(lista);
   }
   const linkPedido = (id, token) => location.origin + location.pathname + '?pedido=' + encodeURIComponent(id) + '&t=' + encodeURIComponent(token);
 
   /* ------------------------------------------------------------------
-     Início
+     Carregamento: só aparece enquanto os dados realmente não chegaram
      ------------------------------------------------------------------ */
+  const CHAVE_CACHE = 'rifa:' + location.pathname + ':ultima-situacao';
+  const VALIDADE_CACHE = 12 * 3600 * 1000;
+
   function mostrarTela(qual) {
-    $('#telaCarregando').hidden = qual !== 'carregando';
+    el.telaCarregando.hidden = qual !== 'carregando';
     $('#telaFalha').hidden = qual !== 'falha';
-    $('#app').hidden = qual !== 'app';
+    el.app.hidden = qual !== 'app';
     $('#rodape').hidden = qual !== 'app';
   }
 
-  async function iniciar() {
-    mostrarTela('carregando');
-    try {
-      const [cfg, st] = await Promise.all([Api.get('config'), Api.get('status')]);
-      E.cfg = cfg;
-      ajustarRelogio(cfg.agora);
-      montarAbertura();
-      construirGrade(st);
-      aplicarStatus(st);
+  function progresso(fracao, titulo, devagar) {
+    el.cgProgresso.classList.toggle('esperando', !!devagar);
+    el.cgProgresso.style.transform = 'scaleX(' + fracao + ')';
+    if (titulo) el.cgTitulo.textContent = titulo;
+  }
+  function iniciarDicas() {
+    // mensagens honestas para quando o servidor demora de verdade (não atrasam nada)
+    E.timers.dica1 = setTimeout(() => { el.cgDica.textContent = 'O primeiro acesso do dia pode levar alguns segundos.'; }, 4000);
+    E.timers.dica2 = setTimeout(() => { el.cgDica.textContent = 'Ainda conectando ao servidor. Obrigado pela paciência!'; }, 11000);
+  }
+  function pararDicas() { clearTimeout(E.timers.dica1); clearTimeout(E.timers.dica2); }
+
+  /* troca carregamento → conteúdo com um fade curto; se o carregamento nem
+     chegou a aparecer (dados rápidos), troca direto */
+  function revelarApp() {
+    pararDicas();
+    const cg = el.telaCarregando;
+    const entrar = () => {
       mostrarTela('app');
-      depoisDeMudarPedidos();
-      atualizarCarrinho();
-      await retomarPedido();
-      agendarAtualizacao();
-      E.timers.relogio = setInterval(tickRelogio, 1000);
-    } catch (e) {
-      $('#falhaTexto').textContent = e.message || 'Tente novamente em instantes.';
-      $('#btnTentar').hidden = e.codigo === 'CONFIG_SITE';
-      mostrarTela('falha');
+      if (!reduzMov) {
+        el.app.classList.add('entrando');
+        el.app.addEventListener('animationend', () => el.app.classList.remove('entrando'), { once: true });
+      }
+    };
+    if (cg.hidden || reduzMov || Number(getComputedStyle(cg).opacity) < .05) { entrar(); return; }
+    progresso(1, 'Pronto!');
+    cg.classList.add('saindo');
+    let feito = false;
+    const fim = ev => {
+      if (feito || (ev && ev.target !== cg)) return;
+      feito = true; cg.classList.remove('saindo'); entrar();
+    };
+    cg.addEventListener('transitionend', fim);
+    setTimeout(fim, 320);
+  }
+
+  function lerCache() {
+    const c = LS.ler(CHAVE_CACHE, null);
+    return c && c.cfg && c.st && Date.now() - c.t < VALIDADE_CACHE ? c : null;
+  }
+  function gravarCache(st) { LS.gravar(CHAVE_CACHE, { cfg: E.cfg, st, t: Date.now() }); }
+
+  function montarComDados(cfg, st, doCache) {
+    E.cfg = cfg;
+    if (!doCache) ajustarRelogio(cfg.agora);
+    montarAbertura();
+    construirGrade(st);
+    aplicarStatus(st, doCache);
+    depoisDeMudarPedidos();
+    atualizarCarrinho();
+    revelarApp();
+  }
+
+  async function iniciar() {
+    // 1. visita repetida: mostra na hora a última situação conhecida e atualiza por baixo
+    const cache = lerCache();
+    let doCache = false;
+    if (cache) {
+      try { montarComDados(cache.cfg, cache.st, true); doCache = true; el.atualizacao.textContent = 'Atualizando a situação dos números…'; }
+      catch (e) { doCache = false; }
     }
+    if (!doCache) {
+      mostrarTela('carregando');
+      requestAnimationFrame(() => progresso(.36, '', true));   // avança devagar até a primeira resposta
+      iniciarDicas();
+    }
+
+    // 2. dados frescos (as duas consultas em paralelo; a barra avança a cada resposta)
+    let prontos = 0;
+    const avancar = x => {
+      prontos++;
+      if (!doCache) progresso(prontos === 1 ? .55 : .9, prontos === 1 ? 'Carregando os números…' : 'Quase lá…', prontos === 1);
+      return x;
+    };
+    try {
+      const [cfg, st] = await Promise.all([Api.get('config').then(avancar), Api.get('status').then(avancar)]);
+      if (doCache) { E.cfg = cfg; ajustarRelogio(cfg.agora); montarAbertura(); aplicarStatus(st); atualizarCarrinho(); }
+      else montarComDados(cfg, st, false);
+      gravarCache(st);
+    } catch (e) {
+      pararDicas();
+      if (!doCache) {
+        $('#falhaTexto').textContent = e.message || 'Tente novamente em instantes.';
+        $('#btnTentar').hidden = e.codigo === 'CONFIG_SITE';
+        mostrarTela('falha');
+        return;
+      }
+      // já há uma situação na tela: segue com ela e tenta de novo em seguida
+      E.falhas = 1;
+      el.atualizacao.classList.add('offline');
+      el.atualizacao.textContent = 'Sem conexão no momento. Mostrando a última situação conhecida; tentando atualizar…';
+    }
+    if (E.iniciado) return;
+    E.iniciado = true;
+    await retomarPedido();
+    agendarAtualizacao();
+    E.timers.relogio = setInterval(tickRelogio, 1000);
   }
 
   function montarAbertura() {
     const c = E.cfg;
     document.title = c.nome_rifa;
-    $('#topoNome').textContent = c.nome_recebedor || 'Rifa online';
     $('#nomeRifa').textContent = c.nome_rifa;
     $('#descRifa').textContent = c.descricao || '';
     $('#descRifa').hidden = !c.descricao;
@@ -185,69 +275,100 @@
   /* ------------------------------------------------------------------
      Grade
      ------------------------------------------------------------------ */
+  const LOTE = 120;                       // números por bloco (ver comprador.css)
+  const CLASSE = { D: 'd', R: 'r', P: 'p', X: 'x' };
+  const classeCel = (n, l) => 'bil ' + (E.sel.has(n) ? 's' : CLASSE[l] || 'x') + (E.meus.has(n) ? ' meu' : '');
+  const rotuloCel = (n, l) => 'Número ' + n + ': ' + (E.sel.has(n) ? 'selecionado' : NOME_LETRA[l] || 'fora de venda') + (E.meus.has(n) ? ', do seu pedido' : '');
+
+  /* monta a grade inteira de uma vez, já com a situação de cada número,
+     em uma única escrita no DOM */
   function construirGrade(st) {
     E.ini = st.inicial; E.fim = st.final;
-    E.celulas = []; E.letras = [];
-    const frag = document.createDocumentFragment();
-    for (let n = st.inicial; n <= st.final; n++) {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'bil'; b.dataset.n = n; b.textContent = n;
-      frag.appendChild(b); E.celulas.push(b); E.letras.push('');
+    const total = Math.max(0, st.final - st.inicial + 1);
+    E.letras = new Array(total);
+    const partes = [];
+    for (let i = 0; i < total; i += LOTE) {
+      partes.push('<div class="lote">');
+      for (let j = i, lim = Math.min(total, i + LOTE); j < lim; j++) {
+        const n = E.ini + j, l = st.s.charAt(j) || 'X';
+        E.letras[j] = l;
+        partes.push('<button type="button" class="', classeCel(n, l), '" data-n="', n, '" aria-pressed="', E.sel.has(n),
+          '" aria-label="', rotuloCel(n, l), '"', l === 'D' ? '' : ' aria-disabled="true"', '>', n, '</button>');
+      }
+      partes.push('</div>');
     }
-    const g = $('#grade'); g.textContent = ''; g.appendChild(frag);
+    el.grade.innerHTML = partes.join('');
+    E.celulas = Array.from(el.grade.querySelectorAll('.bil'));
   }
 
+  /* atualiza um número; não toca no DOM se nada mudou */
   function pintar(i) {
     const b = E.celulas[i];
     if (!b) return;
-    const n = E.ini + i, l = E.letras[i] || 'X', sel = E.sel.has(n), meu = E.meus.has(n);
-    b.className = 'bil ' + (sel ? 's' : l.toLowerCase()) + (meu ? ' meu' : '');
-    b.setAttribute('aria-pressed', sel ? 'true' : 'false');
-    b.setAttribute('aria-label', 'Número ' + n + ': ' + (sel ? 'selecionado' : NOME_LETRA[l]) + (meu ? ', do seu pedido' : ''));
+    const n = E.ini + i, l = E.letras[i] || 'X';
+    const cls = classeCel(n, l);
+    if (b.className === cls) return;
+    b.className = cls;
+    b.setAttribute('aria-pressed', E.sel.has(n) ? 'true' : 'false');
+    b.setAttribute('aria-label', rotuloCel(n, l));
     if (l === 'D') b.removeAttribute('aria-disabled'); else b.setAttribute('aria-disabled', 'true');
   }
 
-  function aplicarStatus(st) {
-    if (st.inicial !== E.ini || st.final !== E.fim) { construirGrade(st); }
-    ajustarRelogio(st.agora);
+  function aplicarStatus(st, doCache) {
+    if (!doCache) ajustarRelogio(st.agora);
     const perdidos = [];
-    for (let i = 0; i < st.s.length; i++) {
-      const l = st.s.charAt(i), n = E.ini + i;
-      if (l !== 'D' && E.sel.has(n)) { E.sel.delete(n); perdidos.push(n); }
-      if (l !== E.letras[i] || perdidos[perdidos.length - 1] === n) { E.letras[i] = l; pintar(i); }
+    if (st.inicial !== E.ini || st.final !== E.fim) {
+      // a faixa de números mudou: refaz a grade e confere a seleção
+      E.sel.forEach(n => { const l = st.s.charAt(n - st.inicial); if (l !== 'D') { E.sel.delete(n); perdidos.push(n); } });
+      construirGrade(st);
+    } else if (st.versao !== E.versao) {
+      // só percorre a grade quando a situação realmente mudou no servidor
+      for (let i = 0; i < st.s.length; i++) {
+        const l = st.s.charAt(i);
+        if (l === E.letras[i]) continue;
+        const n = E.ini + i;
+        if (l !== 'D' && E.sel.has(n)) { E.sel.delete(n); perdidos.push(n); }
+        E.letras[i] = l;
+        pintar(i);
+      }
     }
+    const mudou = st.versao !== E.versao;
+    E.versao = st.versao;
     if (perdidos.length) {
       toast(perdidos.length === 1
         ? `O número ${perdidos[0]} acabou de ser reservado por outra pessoa e saiu da sua seleção.`
         : `Os números ${listaHumana(perdidos)} acabaram de ser reservados por outras pessoas e saíram da sua seleção.`, 6000);
-      atualizarCarrinho();
+      agendarCarrinho();
     }
-    atualizarProgresso(st.contagem);
-    atualizarStatusRifa(st.status_rifa);
-    const h = new Date(agoraServidor()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const at = $('#atualizacao');
-    at.classList.remove('offline');
-    at.textContent = `Situação atualizada às ${h}. A grade se atualiza sozinha.`;
+    const ct = JSON.stringify(st.contagem);
+    if (ct !== E.contagemTxt) { E.contagemTxt = ct; atualizarProgresso(st.contagem); }
+    if (st.status_rifa !== E.statusRifa) atualizarStatusRifa(st.status_rifa);
+    if (!doCache) {
+      const h = new Date(agoraServidor()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      el.atualizacao.classList.remove('offline');
+      el.atualizacao.textContent = `Situação atualizada às ${h}. A grade se atualiza sozinha.`;
+      if (mudou && E.cfg) gravarCache(st);
+    }
   }
 
   function atualizarProgresso(c) {
     const total = (c.D + c.R + c.P) || 1;
-    $('#progPago').style.width = (c.P / total * 100) + '%';
-    $('#progReserva').style.width = (c.R / total * 100) + '%';
+    // transform em vez de width: a barra anima sem recalcular o layout da página
+    el.progPago.style.transform = 'scaleX(' + (c.P / total) + ')';
+    el.progReserva.style.transform = 'scaleX(' + ((c.P + c.R) / total) + ')';
     let txt = `${c.P} de ${c.D + c.R + c.P} números vendidos`;
     if (c.R) txt += `, ${c.R} ${c.R === 1 ? 'reservado' : 'reservados'} agora`;
-    $('#progTexto').textContent = txt;
-    $('#gradeVazia').hidden = c.D > 0;
+    el.progTexto.textContent = txt;
+    el.gradeVazia.hidden = c.D > 0;
   }
 
   function atualizarStatusRifa(st) {
     E.statusRifa = st;
-    const faixa = $('#faixaFechada');
-    faixa.hidden = st === 'ABERTA';
-    faixa.textContent = MSG_FECHADA[st] || '';
-    $('#carrinho').hidden = st !== 'ABERTA' && !E.sel.size;
-    $('.ferramentas .sorte').hidden = st !== 'ABERTA';
-    atualizarCarrinho();
+    el.faixaFechada.hidden = st === 'ABERTA';
+    el.faixaFechada.textContent = MSG_FECHADA[st] || '';
+    el.carrinho.hidden = st !== 'ABERTA' && !E.sel.size;
+    el.sorte.hidden = st !== 'ABERTA';
+    agendarCarrinho();
   }
 
   function alternar(n) {
@@ -263,15 +384,15 @@
       if (E.sel.size >= E.cfg.max_por_pedido) { toast(`Você pode escolher até ${E.cfg.max_por_pedido} números por pedido.`); return; }
       E.sel.add(n);
     }
-    pintar(i);
-    atualizarCarrinho();
+    pintar(i);            // resposta visual imediata no número tocado
+    agendarCarrinho();    // o carrinho é atualizado uma vez por quadro, mesmo com toques rápidos
   }
 
   function escolherParaMim() {
     if (!vendaAberta()) return;
     const qtd = Number($('#sorteQtd').textContent);
     const livres = [];
-    E.letras.forEach((l, i) => { if (l === 'D' && !E.sel.has(E.ini + i)) livres.push(E.ini + i); });
+    for (let i = 0; i < E.letras.length; i++) if (E.letras[i] === 'D' && !E.sel.has(E.ini + i)) livres.push(E.ini + i);
     const cabe = Math.min(qtd, livres.length, E.cfg.max_por_pedido - E.sel.size);
     if (cabe <= 0) {
       toast(livres.length ? `Você já está no limite de ${E.cfg.max_por_pedido} números.` : 'Não há números livres para escolher.');
@@ -284,17 +405,25 @@
       escolhidos.push(livres[k]);
     }
     escolhidos.sort((a, b) => a - b).forEach(n => { E.sel.add(n); pintar(n - E.ini); });
-    atualizarCarrinho();
+    agendarCarrinho();
     toast(escolhidos.length === 1 ? `Escolhemos o ${escolhidos[0]} para você.` : `Escolhemos ${listaHumana(escolhidos)} para você.`);
   }
 
   function irPara() {
-    const n = Number($('#irPara').value);
+    const campo = $('#irPara');
+    const n = Number(campo.value);
+    if (campo.value === '' ) return;
     if (!Number.isInteger(n) || n < E.ini || n > E.fim) { toast(`Digite um número de ${E.ini} a ${E.fim}.`); return; }
     const b = E.celulas[n - E.ini];
-    if ($('#soLivres').checked && E.letras[n - E.ini] !== 'D' && !E.sel.has(n)) { $('#soLivres').checked = false; $('#grade').classList.remove('so-livres'); }
+    if (el.soLivres.checked && E.letras[n - E.ini] !== 'D' && !E.sel.has(n)) { el.soLivres.checked = false; el.grade.classList.remove('so-livres'); }
     b.scrollIntoView({ block: 'center', behavior: reduzMov ? 'auto' : 'smooth' });
-    b.classList.remove('piscar'); void b.offsetWidth; b.classList.add('piscar');
+    // reinicia o destaque sem forçar recálculo de layout
+    b.classList.remove('piscar');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      b.classList.add('piscar');
+      clearTimeout(E.timers.piscar);
+      E.timers.piscar = setTimeout(() => b.classList.remove('piscar'), 1600);
+    }));
     b.focus({ preventScroll: true });
   }
 
@@ -303,19 +432,22 @@
      ------------------------------------------------------------------ */
   function agendarAtualizacao(ms) {
     clearTimeout(E.timers.poll);
-    const base = Math.max(3, E.cfg.intervalo_atualizacao_seg || 8) * 1000;
+    const base = Math.max(3, (E.cfg && E.cfg.intervalo_atualizacao_seg) || 8) * 1000;
     E.timers.poll = setTimeout(atualizarGrade, ms ?? (E.falhas ? Math.min(60000, base * 2 ** E.falhas) : base));
   }
   async function atualizarGrade() {
     if (document.hidden) { E.esperandoVisivel = true; return; }
+    if (E.buscando) return;                 // evita duas consultas ao mesmo tempo
+    E.buscando = true;
     try {
       aplicarStatus(await Api.get('status', {}, { timeout: 15000 }));
       E.falhas = 0;
     } catch (e) {
       E.falhas = Math.min(E.falhas + 1, 5);
-      const at = $('#atualizacao');
-      at.classList.add('offline');
-      at.textContent = 'Sem conexão no momento. Tentando atualizar de novo…';
+      el.atualizacao.classList.add('offline');
+      el.atualizacao.textContent = 'Sem conexão no momento. Tentando atualizar de novo…';
+    } finally {
+      E.buscando = false;
     }
     agendarAtualizacao();
   }
@@ -327,25 +459,60 @@
   /* ------------------------------------------------------------------
      Carrinho
      ------------------------------------------------------------------ */
+  let carrinhoAgendado = false;
+  function agendarCarrinho() {
+    if (carrinhoAgendado) return;
+    carrinhoAgendado = true;
+    requestAnimationFrame(() => { carrinhoAgendado = false; atualizarCarrinho(); });
+  }
+
   function atualizarCarrinho() {
     if (!E.cfg) return;
     const nums = [...E.sel].sort((a, b) => a - b);
     const q = nums.length;
-    $('#carrinhoQtd').textContent = q ? plural(q, '1 número escolhido', '# números escolhidos') : 'Nenhum número escolhido';
-    $('#carrinhoTotal').textContent = brl(q * E.cfg.valor_numero);
-    $('#btnReservar').disabled = !q || !vendaAberta();
-    $('#carrinho').classList.toggle('tem', q > 0);
-    if (!q) { $('#carrinho').classList.remove('aberto'); $('#btnCarrinhoAbrir').setAttribute('aria-expanded', 'false'); }
-    $('#carrinhoVazio').hidden = q > 0;
-    $('#btnLimpar').hidden = q < 2;
-    $('#chips').innerHTML = nums.map(n => `<li><button type="button" data-n="${n}" aria-label="Tirar o ${n}">${n} <span aria-hidden="true">×</span></button></li>`).join('');
-    if (E.statusRifa !== 'ABERTA') $('#carrinho').hidden = !q;
+    el.carrinhoQtd.textContent = q ? plural(q, '1 número escolhido', '# números escolhidos') : 'Nenhum número escolhido';
+    const total = brl(q * E.cfg.valor_numero);
+    if (el.carrinhoTotal.textContent !== total) {
+      el.carrinhoTotal.textContent = total;
+      if (E.carrinhoPronto && !reduzMov && el.carrinhoTotal.animate) {
+        el.carrinhoTotal.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 240, easing: 'ease-out' });
+      }
+    }
+    el.btnReservar.disabled = !q || !vendaAberta();
+    el.carrinho.classList.toggle('tem', q > 0);
+    if (!q) { el.carrinho.classList.remove('aberto'); el.btnCarrinhoAbrir.setAttribute('aria-expanded', 'false'); }
+    el.carrinhoVazio.hidden = q > 0;
+    el.btnLimpar.hidden = q < 2;
+
+    // chips: só entra e sai o que mudou (os demais ficam parados, sem piscar)
+    const ul = el.chips;
+    const atuais = new Map();
+    for (const li of Array.from(ul.children)) {
+      const n = Number(li.dataset.n);
+      if (E.sel.has(n)) atuais.set(n, li); else li.remove();
+    }
+    let anterior = null;
+    nums.forEach(n => {
+      let li = atuais.get(n);
+      if (!li) {
+        li = document.createElement('li');
+        li.dataset.n = n;
+        li.innerHTML = `<button type="button" data-n="${n}" aria-label="Tirar o ${n}">${n} <span aria-hidden="true">×</span></button>`;
+        if (E.carrinhoPronto) li.className = 'entra';
+      }
+      const ref = anterior ? anterior.nextSibling : ul.firstChild;
+      if (li !== ref) ul.insertBefore(li, ref);
+      anterior = li;
+    });
+    E.carrinhoPronto = true;
+    if (E.statusRifa !== 'ABERTA') el.carrinho.hidden = !q;
   }
 
   /* ------------------------------------------------------------------
      Checkout: etapas
      ------------------------------------------------------------------ */
   const dlg = $('#checkout');
+  const dlgPedidos = $('#dlgPedidos');
   const PASSO = { dados: 1, pix: 2, comprovante: 3, final: 3 };
 
   function mostrarEtapa(etapa, finalConcluida) {
@@ -359,10 +526,13 @@
       if (p === atual && !feito) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
     });
     $('.painel-corpo', dlg).scrollTop = 0;
+    if (etapa === 'pix') tickRelogio();      // contador já aparece certo ao abrir o Pix
   }
 
+  const travarRolagem = () => document.documentElement.classList.toggle('painel-aberto', dlg.open || dlgPedidos.open);
   function abrirPainel() {
     if (!dlg.open) { if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', ''); }
+    travarRolagem();
   }
   function fecharPainel() {
     pararVigia();
@@ -371,6 +541,7 @@
 
   function abrirCheckout() {
     if (!E.sel.size || !vendaAberta()) return;
+    carregarQr().catch(() => {});            // já vai baixando o gerador de QR Code enquanto a pessoa preenche
     const salvo = LS.ler('rifa:comprador', {});
     $('#fNome').value = $('#fNome').value || salvo.nome || '';
     $('#fTel').value = $('#fTel').value || salvo.telefone || '';
@@ -558,9 +729,10 @@
   }
 
   /* Aviso no topo da página para pedido em andamento */
-  function atualizarAviso() {
-    const x = pedidosSalvos().find(i => ativo(i.status));
-    const box = $('#avisoPedido');
+  function atualizarAviso(lista) {
+    const x = (lista || pedidosSalvos()).find(i => ativo(i.status));
+    const box = el.avisoPedido;
+    E.aviso = null;
     if (!x || (x.status === ST.AGUARDANDO && Date.parse(x.expira) <= agoraServidor())) { box.hidden = true; return; }
     box.hidden = false;
     box.dataset.id = x.id;
@@ -568,10 +740,11 @@
     const nums = listaHumana(x.numeros || []);
     if (x.status === ST.AGUARDANDO) {
       box.querySelector('p').innerHTML = `Seu pedido com ${esc(plural((x.numeros || []).length, 'o número', 'os números'))} <strong>${esc(nums)}</strong> aguarda pagamento. Faltam <strong data-contagem-aviso>${formatarTempo(Date.parse(x.expira) - agoraServidor())}</strong>.`;
-      $('#btnAvisoAbrir').textContent = 'Continuar pagamento';
+      el.btnAvisoAbrir.textContent = 'Continuar pagamento';
+      E.aviso = { expira: Date.parse(x.expira), alvo: box.querySelector('[data-contagem-aviso]') };
     } else {
       box.querySelector('p').innerHTML = `Recebemos o comprovante do pedido com <strong>${esc(nums)}</strong>. A organização está conferindo.`;
-      $('#btnAvisoAbrir').textContent = 'Ver pedido';
+      el.btnAvisoAbrir.textContent = 'Ver pedido';
     }
   }
 
@@ -580,21 +753,20 @@
     return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
   };
 
-  /* relógio de 1 em 1 segundo: contagem do Pix e do aviso */
+  /* relógio de 1 em 1 segundo: contagem do Pix e do aviso (só mexe no que está na tela) */
   function tickRelogio() {
-    const aviso = $('[data-contagem-aviso]');
-    if (aviso) {
-      const x = pedidosSalvos().find(i => i.id === $('#avisoPedido').dataset.id);
-      const rest = x ? Date.parse(x.expira) - agoraServidor() : 0;
-      if (rest <= 0) atualizarAviso(); else aviso.textContent = formatarTempo(rest);
+    if (E.aviso) {
+      const rest = E.aviso.expira - agoraServidor();
+      if (rest <= 0) atualizarAviso(); else E.aviso.alvo.textContent = formatarTempo(rest);
     }
     if (!E.pedido || E.pedido.status !== ST.AGUARDANDO) return;
-    const exp = Date.parse(E.pedido.expira_em);
-    const rest = exp - agoraServidor();
-    const total = E.cfg.prazo_reserva_minutos * 60000;
-    $('#pxTempo').textContent = formatarTempo(rest);
-    $('#pxBarra').style.width = Math.max(0, Math.min(100, rest / total * 100)) + '%';
-    $('#pxRelogio').classList.toggle('urgente', rest < 3 * 60000);
+    const rest = Date.parse(E.pedido.expira_em) - agoraServidor();
+    if (E.etapa === 'pix') {
+      const total = E.cfg.prazo_reserva_minutos * 60000;
+      el.pxTempo.textContent = formatarTempo(rest);
+      el.pxBarra.style.transform = 'scaleX(' + Math.max(0, Math.min(1, rest / total)) + ')';
+      el.pxRelogio.classList.toggle('urgente', rest < 3 * 60000);
+    }
     if (rest <= 0) consultarPedidoAtual();
   }
 
@@ -610,11 +782,28 @@
     $('#pxNumeros').textContent = listaHumana(p.numeros);
     $('#pxPedido').textContent = p.pedido_id;
     if (pg.copia_e_cola) desenharQr(pg.copia_e_cola);
-    tickRelogio();
   }
 
-  function desenharQr(texto) {
+  /* a biblioteca de QR Code (56 KB) só é baixada quando a pessoa vai pagar */
+  let qrPromessa = null;
+  function carregarQr() {
+    if (typeof window.qrcode === 'function') return Promise.resolve();
+    if (!qrPromessa) {
+      qrPromessa = new Promise((ok, falha) => {
+        const sc = document.createElement('script');
+        sc.src = 'assets/js/vendor/qrcode.js';
+        sc.async = true;
+        sc.onload = ok;
+        sc.onerror = () => { qrPromessa = null; falha(new Error('qr')); };
+        document.head.appendChild(sc);
+      });
+    }
+    return qrPromessa;
+  }
+
+  async function desenharQr(texto) {
     const cv = $('#pxQr'), img = $('#pxQrImg');
+    try { await carregarQr(); } catch (e) { /* usa o serviço de reserva abaixo */ }
     if (typeof window.qrcode === 'function') {
       try {
         const qr = window.qrcode(0, 'M');
@@ -817,8 +1006,6 @@
   /* ------------------------------------------------------------------
      Meus pedidos
      ------------------------------------------------------------------ */
-  const dlgPedidos = $('#dlgPedidos');
-
   function renderMeusPedidos() {
     const lista = pedidosSalvos();
     $('#mpLista').innerHTML = lista.length ? lista.map(x => `
@@ -836,6 +1023,7 @@
   async function abrirMeusPedidos() {
     renderMeusPedidos();
     dlgPedidos.showModal();
+    travarRolagem();
     // atualiza até 5 pedidos que ainda podem mudar
     for (const x of pedidosSalvos().filter(i => ativo(i.status)).slice(0, 5)) {
       try { atualizarSalvo((await consultar(x.id, x.token)).pedido); renderMeusPedidos(); } catch (e) { /* segue */ }
@@ -848,9 +1036,9 @@
   $('#grade').addEventListener('click', e => {
     const b = e.target.closest('.bil'); if (b) alternar(Number(b.dataset.n));
   });
-  $('#soLivres').addEventListener('change', e => $('#grade').classList.toggle('so-livres', e.target.checked));
-  $('#irPara').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); irPara(); } });
-  $('#irPara').addEventListener('change', irPara);
+  el.soLivres.addEventListener('change', e => el.grade.classList.toggle('so-livres', e.target.checked));
+  $('#irPara').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
+  $('#irPara').addEventListener('change', irPara);    // Enter, sair do campo ou setinhas: um único disparo
   function mudarQtdSorte(d) {
     const o = $('#sorteQtd');
     const n = Math.min(E.cfg ? E.cfg.max_por_pedido : 50, Math.max(1, Number(o.textContent) + d));
@@ -886,7 +1074,8 @@
   });
   $('#formDados').addEventListener('submit', enviarDados);
   $('#ckFechar').addEventListener('click', fecharPainel);
-  dlg.addEventListener('close', () => { pararVigia(); atualizarAviso(); });
+  dlg.addEventListener('close', () => { pararVigia(); atualizarAviso(); travarRolagem(); });
+  dlgPedidos.addEventListener('close', travarRolagem);
 
   $('#btnCopiarCodigo').addEventListener('click', async () => {
     const ok = await copiar($('#pxCodigo').value);
