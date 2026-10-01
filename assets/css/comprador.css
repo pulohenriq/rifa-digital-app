@@ -3,7 +3,7 @@
    ===================================================================== */
 
 body { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
-html:has(dialog[open]) { overflow: hidden; }
+html.painel-aberto { overflow: hidden; }   /* classe aplicada pelo JS (mais barato que :has) */
 
 main, .rodape { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
 
@@ -14,7 +14,23 @@ main, .rodape { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
   background: var(--vinho-escuro); color: var(--papel);
   border-bottom: 4px solid var(--salmao);
 }
-.topo-nome { font-family: var(--display); font-weight: 800; font-stretch: 110%; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topo { position: relative; z-index: 2; padding-inline: max(16px, calc((100vw - 1180px) / 2 + 16px)); }
+
+/* ---------- Marca ---------- */
+.marca { display: inline-flex; align-items: center; gap: 10px; color: var(--papel); text-decoration: none; min-width: 0; padding: 2px 0; }
+.marca-simbolo { width: 40px; height: 28px; flex: none; overflow: visible; transition: transform .35s cubic-bezier(.3, 1.4, .5, 1); }
+.ms-bilhete { fill: var(--papel); }
+.ms-canhoto { fill: var(--salmao); }
+.ms-picote { stroke: var(--vinho-escuro); stroke-width: 1.6; stroke-dasharray: 2 2.4; stroke-linecap: round; opacity: .45; }
+.ms-estrela { fill: var(--vinho); transform-box: fill-box; transform-origin: center; transition: transform .45s cubic-bezier(.3, 1.4, .5, 1); }
+.marca-nome { font-family: var(--display); font-size: 1.12rem; font-stretch: 115%; letter-spacing: -.01em; white-space: nowrap; line-height: 1; }
+.marca-nome b { font-weight: 900; margin-right: .22em; }
+.marca-nome { font-weight: 500; }
+@media (hover: hover) {
+  .marca:hover .marca-simbolo { transform: rotate(-7deg) translateY(-1px); }
+  .marca:hover .ms-estrela { transform: rotate(90deg) scale(1.12); }
+}
+.marca:focus-visible { outline-color: var(--salmao); border-radius: 6px; }
 .topo-acoes { display: flex; gap: 6px; flex: none; }
 .topo-btn {
   background: none; border: 1.5px solid rgba(244, 230, 216, .35); border-radius: 999px;
@@ -27,11 +43,79 @@ main, .rodape { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
 .estado { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 40px 16px; }
 .estado h1 { font-size: 1.6rem; }
 .estado p { color: var(--tinta-suave); max-width: 44ch; }
-.estado-bilhete {
-  width: 84px; height: 52px; border-radius: 10px; background: var(--branco); border: 2px solid var(--salmao);
-  position: relative; animation: pulsa 1.2s ease-in-out infinite;
+
+/* Tela de carregamento: aparece com um pequeno atraso (se os dados chegarem
+   antes disso, ela nem chega a ser vista) e sai com fade assim que tudo carrega. */
+.carregando {
+  min-height: 62vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; padding: 40px 16px; text-align: center;
+  animation: cgEntra .4s ease-out .18s both;
+  transition: opacity .22s ease, transform .22s ease;
 }
-@keyframes pulsa { 50% { transform: scale(.94); opacity: .6; } }
+.carregando.saindo { opacity: 0; transform: translateY(-6px); }
+@keyframes cgEntra { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+
+.cg-bilhete {
+  position: relative; display: grid; grid-template-columns: 46px 112px; height: 68px;
+  border-radius: 14px; background: var(--branco); box-shadow: 0 14px 34px rgba(106, 19, 20, .16);
+  animation: cgFlutua 3.2s ease-in-out infinite;
+}
+.cg-canhoto {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  background: var(--vinho); border-radius: 14px 0 0 14px; border-right: 2px dashed rgba(255, 250, 244, .55);
+}
+.cg-canhoto::before, .cg-canhoto::after {     /* recortes do picote, como no bilhete do sorteio */
+  content: ""; position: absolute; right: -9px; width: 16px; height: 16px; border-radius: 50%; background: var(--papel);
+}
+.cg-canhoto::before { top: -8px; }
+.cg-canhoto::after { bottom: -8px; }
+.cg-canhoto svg { width: 22px; height: 22px; fill: var(--ouro); animation: cgGira 3.2s cubic-bezier(.5, 0, .3, 1) infinite; }
+.cg-janela {
+  overflow: hidden; height: 68px;
+  -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+          mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+}
+.cg-fita { display: flex; flex-direction: column; animation: cgRola 3.2s cubic-bezier(.65, 0, .35, 1) infinite; }
+.cg-fita span {
+  height: 68px; display: flex; align-items: center; justify-content: center; flex: none;
+  font: 900 2.1rem/1 var(--display); font-stretch: 122%; font-variant-numeric: tabular-nums; color: var(--vinho-escuro);
+}
+/* a fita para em cada número, como o sorteio; o último é igual ao primeiro (volta sem salto) */
+@keyframes cgRola {
+  0%, 14% { transform: translateY(0); }
+  20%, 34% { transform: translateY(-68px); }
+  40%, 54% { transform: translateY(-136px); }
+  60%, 74% { transform: translateY(-204px); }
+  80%, 94% { transform: translateY(-272px); }
+  100% { transform: translateY(-340px); }
+}
+@keyframes cgFlutua { 50% { transform: translateY(-4px); } }
+@keyframes cgGira { 0%, 70% { transform: rotate(0); } 100% { transform: rotate(180deg); } }
+
+.cg-titulo { font-family: var(--display); font-weight: 800; font-size: 1.2rem; color: var(--vinho-escuro); }
+.cg-barra { position: relative; width: min(240px, 70vw); height: 6px; border-radius: 99px; background: var(--linha); overflow: hidden; }
+.cg-progresso {
+  position: absolute; inset: 0; background: var(--vinho); border-radius: inherit;
+  transform: scaleX(.04); transform-origin: left; transition: transform .45s cubic-bezier(.3, .7, .3, 1);
+}
+/* enquanto espera a primeira resposta, a barra avança devagar (nunca chega ao fim
+   sozinha); cada resposta real do servidor dá um salto */
+.cg-progresso.esperando { transition: transform 9s cubic-bezier(.1, .6, .2, 1); }
+.cg-brilho {          /* brilho que corre pela barra: mostra que está trabalhando */
+  position: absolute; top: 0; bottom: 0; left: 0; width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 250, 244, .7), transparent);
+  animation: cgBrilho 1.4s ease-in-out infinite;
+}
+@keyframes cgBrilho { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+.cg-dica { min-height: 1.4em; color: var(--tinta-suave); font-size: .92rem; max-width: 36ch; }
+
+/* conteúdo entra com fade curto quando o carregamento termina */
+#app.entrando { animation: appEntra .32s ease-out both; }
+@keyframes appEntra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-fita, .cg-bilhete, .cg-canhoto svg, .cg-brilho { animation: none !important; }
+}
 
 /* ---------- Aviso de pedido em andamento ---------- */
 .aviso-pedido {
@@ -68,11 +152,15 @@ main, .rodape { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
 .progresso { flex: 1 1 240px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
 .progresso p { font-weight: 700; }
 .progresso-trilho {
-  display: flex; height: 12px; border-radius: 99px; overflow: hidden;
+  position: relative; display: block; height: 12px; border-radius: 99px; overflow: hidden;
   background: repeating-linear-gradient(90deg, var(--linha-forte) 0 6px, transparent 6px 10px);
 }
-.progresso-pago { background: var(--pago); transition: width .5s; }
-.progresso-reserva { background: var(--reserva); transition: width .5s; }
+.progresso-pago, .progresso-reserva {
+  position: absolute; inset: 0; transform: scaleX(0); transform-origin: left;
+  transition: transform .6s cubic-bezier(.3, .7, .3, 1);
+}
+.progresso-pago { background: var(--pago); z-index: 1; }
+.progresso-reserva { background: var(--reserva); }
 
 .faixa-fechada {
   margin-top: 18px; padding: 12px 16px; border-radius: 12px;
@@ -109,8 +197,24 @@ main, .rodape { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
 .atualizacao.offline { color: var(--erro); font-weight: 700; }
 
 /* ---------- Grade de bilhetes ---------- */
-.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px 8px; }
-@media (min-width: 700px) { .grade { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); } }
+/* A grade é dividida em blocos de 120 números. 120 é divisível por 5, 6, 8
+   e 10, as colunas usadas em cada tamanho de tela, então os blocos se encaixam
+   sem buracos. Blocos fora da tela não são desenhados (content-visibility),
+   o que deixa rifas de centenas ou milhares de números leves no celular. */
+.grade { --cols: 5; margin: -6px 0; }
+@media (min-width: 440px) { .grade { --cols: 6; } }
+@media (min-width: 600px) { .grade { --cols: 8; } }
+@media (min-width: 760px) { .grade { --cols: 10; } }
+@media (min-width: 980px) { .grade { --cols: 8; } }
+@media (min-width: 1100px) { .grade { --cols: 10; } }
+.lote {
+  display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 10px 8px;
+  padding: 6px; margin: 0 -6px;
+  content-visibility: auto; contain-intrinsic-size: auto calc(120 / var(--cols) * 58px);
+}
+.lote + .lote { margin-top: -2px; }
+.grade.so-livres { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 10px 8px; margin: 0; }
+.grade.so-livres .lote { display: contents; }
 
 
 .grade.so-livres .bil.r, .grade.so-livres .bil.p, .grade.so-livres .bil.x { display: none; }
@@ -129,7 +233,7 @@ main, .rodape { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
   background: none; border: 0; padding: 4px 0; text-align: left; cursor: pointer;
 }
 .carrinho-abrir span { font-size: .9rem; color: var(--tinta-suave); }
-.carrinho-abrir strong { font-family: var(--display); font-weight: 900; font-stretch: 112%; font-size: 1.4rem; color: var(--vinho-escuro); }
+.carrinho-abrir strong { display: inline-block; font-family: var(--display); font-weight: 900; font-stretch: 112%; font-size: 1.4rem; color: var(--vinho-escuro); font-variant-numeric: tabular-nums; transform-origin: left center; }
 .carrinho.tem .carrinho-abrir span::after { content: "  (ver)"; color: var(--vinho); font-weight: 700; }
 .carrinho.tem.aberto .carrinho-abrir span::after { content: "  (fechar)"; }
 .carrinho-resumo .btn { padding: 12px 26px; }
@@ -210,7 +314,7 @@ dialog.painel::backdrop { background: rgba(46, 21, 18, .55); }
 .pix-valor strong { font-family: var(--display); font-weight: 900; font-stretch: 115%; font-size: 2.2rem; color: var(--vinho-escuro); }
 .relogio { margin-top: 14px; }
 .relogio-trilho { height: 8px; border-radius: 99px; background: var(--linha); overflow: hidden; }
-.relogio-trilho span { display: block; height: 100%; width: 100%; background: var(--ok); transition: width 1s linear, background-color .3s; }
+.relogio-trilho span { display: block; height: 100%; width: 100%; background: var(--ok); transform-origin: left; transition: transform 1s linear, background-color .3s; }
 .relogio p { margin-top: 8px; font-size: .95rem; }
 .relogio strong { font-family: var(--display); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 .relogio.urgente .relogio-trilho span { background: var(--erro); }
@@ -267,3 +371,32 @@ dialog.painel::backdrop { background: rgba(46, 21, 18, .55); }
 .selo-status.COMPROVANTE_ENVIADO { background: var(--salmao-claro); color: var(--vinho-escuro); }
 .selo-status.PAGAMENTO_CONFIRMADO { background: #e6ecd9; color: var(--ok); }
 .selo-status.EXPIRADO, .selo-status.CANCELADO { background: #efe4dc; color: var(--tinta-suave); }
+
+/* ---------- Microinterações ---------- */
+.chips li.entra { animation: chipEntra .22s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes chipEntra { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
+.chips button { transition: transform .12s; touch-action: manipulation; }
+.chips button:active { transform: scale(.94); }
+.topo-btn { transition: border-color .15s, background-color .15s; }
+.topo-btn:active { background: rgba(244, 230, 216, .1); }
+
+/* ---------- Como funciona ---------- */
+.como-funciona {
+  list-style: none; margin: 20px 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
+}
+.como-funciona li {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  background: var(--branco); border: 1px solid var(--linha); border-radius: 12px;
+  font-size: .92rem; font-weight: 500; line-height: 1.3;
+}
+.como-funciona span {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--salmao-claro); color: var(--vinho-escuro); font: 800 .9rem/1 var(--display);
+}
+@media (max-width: 640px) {
+  .como-funciona { gap: 6px; }
+  .como-funciona li { flex-direction: column; align-items: flex-start; gap: 6px; padding: 9px 10px; font-size: .82rem; }
+  .como-funciona span { width: 22px; height: 22px; font-size: .8rem; }
+}
