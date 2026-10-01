@@ -76,9 +76,10 @@ a { color: var(--vinho); }
   min-height: 48px; padding: 12px 24px;
   border: 2px solid transparent; border-radius: 999px;
   font-family: var(--texto); font-weight: 700; font-size: 1rem; line-height: 1.2;
-  text-decoration: none; cursor: pointer;
-  transition: background-color .15s, border-color .15s, color .15s;
+  text-decoration: none; cursor: pointer; touch-action: manipulation;
+  transition: background-color .15s, border-color .15s, color .15s, transform .1s;
 }
+.btn:active:not([disabled]) { transform: scale(.97); }
 .btn.primario { background: var(--vinho); border-color: var(--vinho); color: var(--branco); }
 .btn.primario:hover:not([disabled]) { background: var(--vinho-escuro); border-color: var(--vinho-escuro); }
 .btn.secundario { background: transparent; border-color: var(--vinho); color: var(--vinho); }
@@ -155,28 +156,44 @@ a { color: var(--vinho); }
 .amostra.p { border-color: var(--pago); background: var(--pago); }
 .amostra.meu { outline: 2px dashed var(--vinho-escuro); outline-offset: 2px; margin: 0 4px 0 3px; }
 
-/* Bilhete da grade: recortes laterais como no sorteio original */
+/* Bilhete da grade: recortes laterais como no sorteio original.
+   Desempenho: só transform é animado (vai para a GPU); cores mudam na hora,
+   sem transição, e cada bilhete isola o próprio layout (contain). */
 .bil {
   --b: var(--livre); --f: var(--branco); --t: var(--livre);
   position: relative; height: 48px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   background: var(--f); color: var(--t); border: 2px solid var(--b); border-radius: 9px;
   font: 800 1.05rem/1 var(--display); font-stretch: 112%; font-variant-numeric: tabular-nums;
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: transform .12s ease, background-color .12s, box-shadow .12s;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  contain: layout style;
+  transition: transform .14s ease-out;
 }
-/* recortes laterais do bilhete */
+/* recortes laterais: meia-lua desenhada direto, sem clip-path (pinta muito mais rápido) */
 .bil::before, .bil::after {
-  content: ""; position: absolute; top: 50%; width: 12px; height: 12px; margin-top: -6px;
-  border-radius: 50%; background: var(--papel); border: 2px solid var(--b);
+  content: ""; position: absolute; top: 50%; width: 7px; height: 12px; margin-top: -6px;
+  background: var(--papel); border: 2px solid var(--b);
 }
-.bil::before { left: -7px; clip-path: inset(0 0 0 50%); }
-.bil::after { right: -7px; clip-path: inset(0 50% 0 0); }
+.bil::before { left: -2px; border-left: 0; border-radius: 0 7px 7px 0 / 0 6px 6px 0; }
+.bil::after { right: -2px; border-right: 0; border-radius: 7px 0 0 7px / 6px 0 0 6px; }
 
-@media (hover: hover) { .bil.d:hover { --f: var(--livre-fundo); } }
+@media (hover: hover) {
+  .bil.d:hover { --f: var(--livre-fundo); transform: translateY(-2px); }
+}
+.bil.d:active { transform: scale(.94); transition-duration: .06s; }
 .bil.s {
   --b: var(--sel-borda); --f: var(--sel); --t: var(--sel-tinta);
-  transform: translateY(-3px); box-shadow: 0 4px 0 -1px rgba(106, 19, 20, .28);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 0 -1px rgba(106, 19, 20, .28);
+  /* visto no canto: reforça o estado sem depender só da cor */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='6' fill='%236a1314'/%3E%3Cpath d='M3.3 6.2l1.8 1.8 3.6-3.8' fill='none' stroke='%23fffaf4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-size: 12px; background-position: right 4px top 4px;
+  animation: marcar .24s cubic-bezier(.3, 1.5, .5, 1);
+}
+@keyframes marcar {
+  0% { transform: scale(.88); }
+  60% { transform: translateY(-3px) scale(1.07); }
+  100% { transform: translateY(-3px); }
 }
 .bil.r { --b: var(--reserva); --f: var(--reserva-fundo); --t: var(--reserva-tinta); border-style: dashed; cursor: default; }
 .bil.p {
@@ -185,8 +202,8 @@ a { color: var(--vinho); }
 }
 .bil.x { --b: var(--linha-forte); --f: transparent; --t: var(--tinta-suave); opacity: .55; text-decoration: line-through; cursor: default; }
 .bil.meu { outline: 2px dashed var(--vinho-escuro); outline-offset: 3px; }
-.bil.piscar { animation: piscar 1.4s ease-out; }
-@keyframes piscar { 0%, 40% { box-shadow: 0 0 0 6px rgba(240, 168, 57, .7); } 100% { box-shadow: 0 0 0 0 rgba(240, 168, 57, 0); } }
+.bil.piscar { outline: 3px solid var(--ouro); outline-offset: 3px; animation: chamar .8s ease-out; }
+@keyframes chamar { 0% { transform: scale(1); } 30% { transform: scale(1.14); } 100% { transform: scale(1); } }
 
 /* Bilhete pequeno (listas de números) */
 .linha-bilhetes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
