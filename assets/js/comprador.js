@@ -97,6 +97,22 @@
    'pxTempo', 'pxBarra', 'pxRelogio', 'soLivres'].forEach(id => { el[id] = document.getElementById(id); });
   el.sorte = document.querySelector('.ferramentas .sorte');
 
+  /* Se o index.html e este arquivo forem de versões diferentes (envio parcial
+     ou cache antigo), avisa com clareza em vez de quebrar no meio. */
+  const faltando = Object.keys(el).filter(k => !el[k]);
+  if (faltando.length) {
+    console.warn('Elementos ausentes no index.html:', faltando.join(', '));
+    const carregando = document.getElementById('telaCarregando');
+    const falha = document.getElementById('telaFalha');
+    const texto = document.getElementById('falhaTexto');
+    if (carregando) carregando.hidden = true;
+    if (falha && texto) {
+      texto.textContent = 'O site está com arquivos de versões diferentes. Envie de novo o index.html e o assets/js/comprador.js e recarregue a página com Ctrl + Shift + R.';
+      falha.hidden = false;
+    }
+    return;
+  }
+
   const agoraServidor = () => Date.now() + E.offset;
   function ajustarRelogio(iso) { const t = Date.parse(iso); if (t) E.offset = t - Date.now(); }
   const vendaAberta = () => E.statusRifa === 'ABERTA';
