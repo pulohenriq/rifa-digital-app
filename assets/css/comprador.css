@@ -46,13 +46,13 @@ main, .rodape { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
 
 /* Tela de carregamento: aparece com um pequeno atraso (se os dados chegarem
    antes disso, ela nem chega a ser vista) e sai com fade assim que tudo carrega. */
-.carregando {
+.tela-carregando {
   min-height: 62vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 18px; padding: 40px 16px; text-align: center;
   animation: cgEntra .4s ease-out .18s both;
   transition: opacity .22s ease, transform .22s ease;
 }
-.carregando.saindo { opacity: 0; transform: translateY(-6px); }
+.tela-carregando.saindo { opacity: 0; transform: translateY(-6px); }
 @keyframes cgEntra { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
 
 .cg-bilhete {
@@ -274,18 +274,31 @@ dialog.painel {
   display: none; flex-direction: column;
 }
 dialog.painel[open] { display: flex; }
-dialog.painel::backdrop { background: rgba(46, 21, 18, .55); }
+dialog.painel::backdrop { background: rgba(46, 21, 18, .5); }
+
+/* Checkout como gaveta lateral: entra pela direita, ocupa a altura toda e,
+   no computador, só 440 px de largura */
+dialog.painel.gaveta { margin: 0 0 0 auto; width: min(440px, 100vw); box-shadow: -20px 0 60px rgba(46, 21, 18, .25); }
+dialog.painel.gaveta[open] { animation: gavetaEntra .3s cubic-bezier(.2, .8, .2, 1); }
+dialog.painel.gaveta[open]::backdrop { animation: veuEntra .3s ease; }
+dialog.painel.gaveta.fechando { animation: gavetaSai .2s ease-in forwards; }
+dialog.painel.gaveta.fechando::backdrop { animation: veuSai .2s ease-in forwards; }
+@keyframes gavetaEntra { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes gavetaSai { to { transform: translateX(100%); } }
+@keyframes veuEntra { from { opacity: 0; } }
+@keyframes veuSai { to { opacity: 0; } }
 @media (min-width: 640px) {
-  dialog.painel { margin: auto; width: min(560px, 94vw); height: auto; max-height: 92vh; border-radius: 20px; box-shadow: 0 30px 80px rgba(46, 21, 18, .35); }
-  dialog.painel.estreito { width: min(480px, 94vw); }
+  dialog.painel.gaveta { border-radius: 18px 0 0 18px; }
+  dialog.painel.estreito { margin: auto; width: min(480px, 94vw); height: auto; max-height: 92vh; border-radius: 20px; box-shadow: 0 30px 80px rgba(46, 21, 18, .35); }
 }
 .painel-cab {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: calc(14px + env(safe-area-inset-top, 0px)) 18px 14px; border-bottom: 1px solid var(--linha); flex: none;
 }
 .painel-cab h2 { font-size: 1.25rem; }
-.painel-corpo { padding: 20px 20px calc(28px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; flex: 1; }
-.painel-corpo h2 { font-size: 1.6rem; font-stretch: 108%; }
+.painel-titulo { font-size: 1.3rem; }
+.painel-corpo { padding: 18px 20px calc(24px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; flex: 1; overscroll-behavior: contain; }
+.painel-corpo h2 { font-size: 1.4rem; font-stretch: 108%; }
 .painel-corpo h2 + p { margin-top: 8px; }
 .fechar {
   width: 42px; height: 42px; flex: none; border-radius: 50%; border: 1.5px solid var(--linha-forte);
@@ -399,4 +412,79 @@ dialog.painel::backdrop { background: rgba(46, 21, 18, .55); }
   .como-funciona { gap: 6px; }
   .como-funciona li { flex-direction: column; align-items: flex-start; gap: 6px; padding: 9px 10px; font-size: .82rem; }
   .como-funciona span { width: 22px; height: 22px; font-size: .8rem; }
+}
+
+/* ---------- Sacola no topo ---------- */
+.topo-sacola {
+  position: relative; width: 42px; height: 42px; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; border: 1.5px solid rgba(244, 230, 216, .35); background: none; color: var(--papel); cursor: pointer;
+  transition: border-color .15s, transform .12s; touch-action: manipulation;
+}
+.topo-sacola:hover { border-color: var(--salmao); }
+.topo-sacola:active { transform: scale(.94); }
+.topo-sacola svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.sacola-cont {
+  position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--ouro); color: var(--sel-tinta); font: 800 .75rem/1 var(--display); font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--vinho-escuro);
+}
+.topo-acoes { align-items: center; }
+
+/* ---------- Gaveta: sacola e formulário compactos ---------- */
+.sacola-lista { list-style: none; margin: 0; padding: 0; }
+.sacola-lista li {
+  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--linha);
+}
+.sacola-lista li.entra { animation: chipEntra .22s cubic-bezier(.3, 1.4, .5, 1); }
+.sacola-lista .mini { min-width: 46px; text-align: center; padding: 8px 6px; font-size: 1rem; background: var(--sel); border-color: var(--sel-borda); color: var(--sel-tinta); }
+.si-info b { display: block; font-size: .98rem; }
+.si-info small { color: var(--tinta-suave); font-size: .82rem; }
+.si-valor { font-weight: 700; font-variant-numeric: tabular-nums; }
+.si-tirar {
+  width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--linha-forte); background: var(--branco);
+  color: var(--tinta-suave); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; touch-action: manipulation;
+}
+.si-tirar:hover { color: var(--erro); border-color: var(--erro); }
+.si-tirar svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sacola-vazia { padding: 28px 8px; text-align: center; color: var(--tinta-suave); }
+.sacola-vazia p + p { margin-top: 4px; }
+.totais { margin-top: 14px; display: grid; gap: 6px; }
+.totais > div { display: flex; justify-content: space-between; gap: 12px; color: var(--tinta-suave); }
+.totais .tot { padding-top: 8px; border-top: 2px dashed var(--linha-forte); color: var(--tinta); font-weight: 700; }
+.totais .tot strong { font-family: var(--display); font-weight: 900; font-size: 1.4rem; color: var(--vinho-escuro); font-variant-numeric: tabular-nums; }
+#sacolaNota { margin-top: 10px; }
+
+/* rodapé fixo da etapa: a ação principal fica sempre à vista */
+.etapa-pe {
+  position: sticky; bottom: calc(-24px - env(safe-area-inset-bottom, 0px)); z-index: 2;
+  margin: 18px -20px calc(-24px - env(safe-area-inset-bottom, 0px));
+  padding: 12px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: var(--branco); border-top: 1px solid var(--linha);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.etapa-pe .nota { margin-top: 0; font-size: .82rem; }
+.etapa-pe .btn-link { padding: 4px; }
+
+#formDados .campo { margin-top: 12px; }
+#formDados .campo > span { font-size: .9rem; margin-bottom: 4px; }
+#formDados .campo input { min-height: 44px; padding: 9px 12px; }
+.campos-duplos { display: grid; grid-template-columns: 1fr; column-gap: 10px; }
+@media (min-width: 420px) { .campos-duplos { grid-template-columns: 1fr 1fr; } }
+.resumo-sel { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; }
+.resumo-sel p { font-size: .95rem; }
+.resumo-sel .btn-link { padding: 2px 0; font-size: .9rem; flex: none; }
+.resumo-sel .linha-bilhetes { margin-top: 6px; }
+
+/* sacola e dados ocupam a altura da gaveta: o rodapé com o botão fica sempre embaixo */
+dialog.gaveta .painel-corpo { display: flex; flex-direction: column; }
+dialog.gaveta [data-etapa="sacola"], dialog.gaveta [data-etapa="dados"] { display: flex; flex-direction: column; flex: 1 0 auto; }
+dialog.gaveta .etapa-pe { margin-top: auto; }
+dialog.gaveta [data-etapa="sacola"], dialog.gaveta [data-etapa="dados"] { padding-bottom: 0; }
+dialog.gaveta .etapa-pe { margin-top: auto; border-top-width: 1px; }
+dialog.gaveta [data-etapa] > :nth-last-child(2) { margin-bottom: 18px; }
+@media (max-width: 420px) {
+  .passos { gap: 4px 10px; font-size: .8rem; }
+  .passos li span { width: 20px; height: 20px; }
 }
