@@ -12,8 +12,8 @@
 <!-- fontes carregadas sem bloquear a primeira pintura da página -->
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,700..900&family=Karla:wght@400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,700..900&family=Karla:wght@400;500;700&display=swap"></noscript>
-<link rel="stylesheet" href="assets/css/tema.css?v=20261001">
-<link rel="stylesheet" href="assets/css/comprador.css?v=20261001">
+<link rel="stylesheet" href="assets/css/tema.css?v=20261002">
+<link rel="stylesheet" href="assets/css/comprador.css?v=20261002">
 </head>
 <body>
 
@@ -30,12 +30,16 @@
   <nav class="topo-acoes">
     <button type="button" class="topo-btn" id="btnMeusPedidos" hidden>Meus pedidos</button>
     <a class="topo-btn" id="lnkWhats" target="_blank" rel="noopener" hidden>Falar com a organização</a>
+    <button type="button" class="topo-sacola" id="btnSacola" aria-label="Abrir sua seleção de números">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2 8.5h13.6l-1 11a1.6 1.6 0 0 1-1.6 1.5H7.8a1.6 1.6 0 0 1-1.6-1.5l-1-11Z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/><path d="M10 14.2h4" stroke-dasharray="1.2 1.8"/></svg>
+      <b class="sacola-cont" id="sacolaCont" hidden>0</b>
+    </button>
   </nav>
 </header>
 
 <main>
   <!-- Carregando / falha -->
-  <section class="carregando" id="telaCarregando" role="status" aria-live="polite">
+  <section class="tela-carregando" id="telaCarregando" role="status" aria-live="polite">
     <div class="cg-bilhete" aria-hidden="true">
       <span class="cg-canhoto"><svg viewBox="0 0 24 24"><path d="M12 4.5l1.9 5.6 5.6 1.9-5.6 1.9L12 19.5l-1.9-5.6L4.5 12l5.6-1.9Z"/></svg></span>
       <span class="cg-janela"><span class="cg-fita"><span>07</span><span>23</span><span>41</span><span>58</span><span>86</span><span>07</span></span></span>
@@ -147,8 +151,9 @@
 </footer>
 
 <!-- ===== Checkout ===== -->
-<dialog class="painel" id="checkout" aria-labelledby="ckTitulo">
+<dialog class="painel gaveta" id="checkout" aria-labelledby="ckTitulo">
   <div class="painel-cab">
+    <h2 class="painel-titulo" id="ckCabTitulo" hidden>Sua seleção</h2>
     <ol class="passos" id="passos">
       <li data-passo="1"><span>1</span>Seus dados</li>
       <li data-passo="2"><span>2</span>Pagamento</li>
@@ -158,6 +163,24 @@
   </div>
 
   <div class="painel-corpo">
+    <!-- 0. Sacola: números escolhidos -->
+    <section data-etapa="sacola" hidden>
+      <ul class="sacola-lista" id="sacolaLista"></ul>
+      <div class="sacola-vazia" id="sacolaVazia" hidden>
+        <p><strong>Nenhum número escolhido.</strong></p>
+        <p>Toque nos números livres da grade para escolher.</p>
+      </div>
+      <div class="totais" id="sacolaTotais">
+        <div><span id="sacolaConta"></span><span id="sacolaSubtotal"></span></div>
+        <div class="tot"><span>Total</span><strong id="sacolaTotal"></strong></div>
+      </div>
+      <p class="nota" id="sacolaNota"></p>
+      <div class="etapa-pe">
+        <button type="button" class="btn primario cheio" id="btnSacolaContinuar">Continuar</button>
+        <button type="button" class="btn-link" data-acao="fechar">Escolher mais números</button>
+      </div>
+    </section>
+
     <!-- 1. Dados -->
     <form data-etapa="dados" id="formDados" novalidate>
       <h2 id="ckTitulo">Seus dados</h2>
@@ -166,13 +189,17 @@
         <input id="fNome" autocomplete="name" maxlength="80" required></label>
       <label class="campo" id="cTel"><span>WhatsApp com DDD</span>
         <input id="fTel" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(61) 99999-8888" required></label>
-      <label class="campo" id="cEmail"><span>E-mail <small id="fEmailOpc">(opcional)</small></span>
-        <input id="fEmail" type="email" autocomplete="email" maxlength="120"></label>
-      <label class="campo" id="cCong"><span>Congregação <small>(opcional)</small></span>
-        <input id="fCong" maxlength="80" autocomplete="off"></label>
+      <div class="campos-duplos">
+        <label class="campo" id="cEmail"><span>E-mail <small id="fEmailOpc">(opcional)</small></span>
+          <input id="fEmail" type="email" autocomplete="email" maxlength="120"></label>
+        <label class="campo" id="cCong"><span>Congregação <small>(opcional)</small></span>
+          <input id="fCong" maxlength="80" autocomplete="off"></label>
+      </div>
       <div class="caixa-erro" id="ckErro" role="alert" hidden></div>
-      <button type="submit" class="btn primario cheio acao" id="btnConfirmar">Reservar e ver o Pix</button>
-      <p class="nota centro">Seus dados são usados só para falar com você sobre esta rifa.</p>
+      <div class="etapa-pe">
+        <button type="submit" class="btn primario cheio" id="btnConfirmar">Reservar e ver o Pix</button>
+        <p class="nota centro">Seus dados são usados só para falar com você sobre esta rifa.</p>
+      </div>
     </form>
 
     <!-- 2. Pix -->
@@ -255,8 +282,8 @@
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
-<script src="assets/js/config.js?v=20261001" defer></script>
-<script src="assets/js/api.js?v=20261001" defer></script>
-<script src="assets/js/comprador.js?v=20261001" defer></script>
+<script src="assets/js/config.js?v=20261002" defer></script>
+<script src="assets/js/api.js?v=20261002" defer></script>
+<script src="assets/js/comprador.js?v=20261002" defer></script>
 </body>
 </html>
