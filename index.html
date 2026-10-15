@@ -12,8 +12,8 @@
 <!-- fontes carregadas sem bloquear a primeira pintura da página -->
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,700..900&family=Karla:wght@400;500;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,700..900&family=Karla:wght@400;500;700&display=swap"></noscript>
-<link rel="stylesheet" href="assets/css/tema.css?v=20261002">
-<link rel="stylesheet" href="assets/css/comprador.css?v=20261002">
+<link rel="stylesheet" href="assets/css/tema.css?v=20261003">
+<link rel="stylesheet" href="assets/css/comprador.css?v=20261003">
 </head>
 <body>
 
@@ -61,9 +61,23 @@
       <button type="button" class="btn primario" id="btnAvisoAbrir">Continuar</button>
     </div>
 
-    <section class="abertura">
+    <section class="abertura" id="abertura">
       <h1 id="nomeRifa"></h1>
       <p class="abertura-desc" id="descRifa"></p>
+
+      <!-- prêmio: aparece quando "premio" está preenchido na aba CONFIG -->
+      <article class="premio" id="premio" hidden>
+        <div class="premio-foto" id="premioFoto">
+          <img id="premioImg" alt="" width="1200" height="900" decoding="async" fetchpriority="high">
+          <svg class="premio-icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9Z"/><path d="M3 7h18v4H3z"/><path d="M12 7v14"/><path d="M12 7c-1.5-2.8-5-3.5-5.6-1.5C5.9 7 9 7 12 7Zm0 0c1.5-2.8 5-3.5 5.6-1.5C18.1 7 15 7 12 7Z"/></svg>
+        </div>
+        <div class="premio-corpo">
+          <span class="premio-rotulo">Prêmio</span>
+          <h2 class="premio-nome" id="premioNome"></h2>
+          <p class="premio-desc" id="premioDesc"></p>
+          <p class="premio-outros" id="premioOutros" hidden></p>
+        </div>
+      </article>
 
       <div class="abertura-linha">
         <div class="canhoto">
@@ -78,14 +92,23 @@
         </div>
       </div>
 
+      <!-- data do sorteio com contagem regressiva -->
+      <div class="sorteio-data" id="sorteioData" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M12 13.2l.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2-1.5-1.4 2-.3Z"/></svg>
+        <p><strong id="sorteioQuando"></strong><span id="sorteioFalta"></span></p>
+      </div>
+
       <ol class="como-funciona" aria-label="Como funciona">
-        <li><span>1</span>Escolha seus números na grade</li>
-        <li><span>2</span>Pague com Pix em poucos minutos</li>
-        <li><span>3</span>A organização confere e confirma</li>
+        <li><span>1</span><em class="curto">Escolha</em><em class="longo">Escolha seus números na grade</em></li>
+        <li><span>2</span><em class="curto">Pix</em><em class="longo">Pague com Pix em poucos minutos</em></li>
+        <li><span>3</span><em class="curto">Confirmação</em><em class="longo">A organização confere e confirma</em></li>
       </ol>
 
       <p class="faixa-fechada" id="faixaFechada" hidden></p>
-      <button type="button" class="btn-link compartilhar" id="btnCompartilhar">Compartilhar a rifa</button>
+      <button type="button" class="btn-link compartilhar" id="btnCompartilhar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="M8.2 10.8l7.6-4.1M8.2 13.2l7.6 4.1"/></svg>
+        <span class="rotulo">Compartilhar a rifa</span>
+      </button>
     </section>
 
     <div class="colunas">
@@ -282,8 +305,8 @@
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
-<script src="assets/js/config.js?v=20261002" defer></script>
-<script src="assets/js/api.js?v=20261002" defer></script>
-<script src="assets/js/comprador.js?v=20261002" defer></script>
+<script src="assets/js/config.js?v=20261003" defer></script>
+<script src="assets/js/api.js?v=20261003" defer></script>
+<script src="assets/js/comprador.js?v=20261003" defer></script>
 </body>
 </html>
