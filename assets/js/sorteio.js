@@ -127,6 +127,11 @@
     if (salvo) {
       cfg = { ...cfg, ...(salvo.cfg || {}) };
       if (salvo.ganhadores && salvo.ganhadores.length) sessaoSalva = salvo;
+    } else if (l.premios && l.premios.length) {
+      // primeira vez: já sugere os prêmios cadastrados na aba CONFIG, um vencedor para cada
+      cfg.usaPremios = true;
+      cfg.premios = l.premios.join('\n');
+      cfg.vencedores = Math.min(50, l.premios.length);
     }
     sorteios = [];
     aplicarCor();
