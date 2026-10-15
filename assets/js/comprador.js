@@ -94,7 +94,9 @@
   ['grade', 'app', 'telaCarregando', 'cgProgresso', 'cgTitulo', 'cgDica', 'atualizacao', 'carrinho', 'carrinhoQtd',
    'carrinhoTotal', 'btnReservar', 'btnCarrinhoAbrir', 'carrinhoVazio', 'btnLimpar', 'chips', 'progPago', 'progReserva',
    'progTexto', 'gradeVazia', 'faixaFechada', 'avisoPedido', 'btnAvisoAbrir', 'btnMeusPedidos', 'legendaMeu',
-   'pxTempo', 'pxBarra', 'pxRelogio', 'soLivres'].forEach(id => { el[id] = document.getElementById(id); });
+   'pxTempo', 'pxBarra', 'pxRelogio', 'soLivres', 'btnSacola', 'sacolaCont', 'sacolaLista', 'sacolaVazia',
+   'sacolaTotais', 'sacolaConta', 'sacolaSubtotal', 'sacolaTotal', 'sacolaNota', 'btnSacolaContinuar', 'ckCabTitulo',
+   'passos'].forEach(id => { el[id] = document.getElementById(id); });
   el.sorte = document.querySelector('.ferramentas .sorte');
 
   /* Se o index.html e este arquivo forem de versões diferentes (envio parcial
@@ -520,6 +522,15 @@
       if (li !== ref) ul.insertBefore(li, ref);
       anterior = li;
     });
+    // contador no botão da sacola, com um pulinho quando muda
+    const antes = el.sacolaCont.textContent;
+    el.sacolaCont.hidden = q === 0;
+    el.sacolaCont.textContent = q;
+    el.btnSacola.setAttribute('aria-label', q ? `Abrir sua seleção: ${plural(q, '1 número', '# números')}` : 'Abrir sua seleção de números');
+    if (E.carrinhoPronto && q && antes !== String(q) && !reduzMov && el.sacolaCont.animate) {
+      el.sacolaCont.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.35)' }, { transform: 'scale(1)' }], { duration: 260, easing: 'ease-out' });
+    }
+    if (dlg.open && E.etapa === 'sacola') renderSacola();
     E.carrinhoPronto = true;
     if (E.statusRifa !== 'ABERTA') el.carrinho.hidden = !q;
   }
@@ -529,11 +540,14 @@
      ------------------------------------------------------------------ */
   const dlg = $('#checkout');
   const dlgPedidos = $('#dlgPedidos');
-  const PASSO = { dados: 1, pix: 2, comprovante: 3, final: 3 };
+  const PASSO = { sacola: 0, dados: 1, pix: 2, comprovante: 3, final: 3 };
 
   function mostrarEtapa(etapa, finalConcluida) {
     E.etapa = etapa;
     $$('[data-etapa]', dlg).forEach(s => { s.hidden = s.dataset.etapa !== etapa; });
+    // na sacola o topo mostra o título; nas demais etapas, os passos
+    el.ckCabTitulo.hidden = etapa !== 'sacola';
+    el.passos.hidden = etapa === 'sacola';
     const atual = PASSO[etapa];
     $$('#passos li').forEach(li => {
       const p = Number(li.dataset.passo);
@@ -550,9 +564,59 @@
     if (!dlg.open) { if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', ''); }
     travarRolagem();
   }
+  /* fecha com a gaveta deslizando para fora (só transform e opacity) */
   function fecharPainel() {
     pararVigia();
-    if (dlg.open) { if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open'); }
+    if (!dlg.open) return;
+    if (typeof dlg.close !== 'function') { dlg.removeAttribute('open'); return; }
+    if (reduzMov) { dlg.close(); return; }
+    if (dlg.classList.contains('fechando')) return;
+    dlg.classList.add('fechando');
+    let feito = false;
+    const fim = ev => {
+      if (feito || (ev && ev.target !== dlg)) return;
+      feito = true;
+      dlg.removeEventListener('animationend', fim);
+      dlg.classList.remove('fechando');
+      dlg.close();
+    };
+    dlg.addEventListener('animationend', fim);
+    setTimeout(fim, 260);
+  }
+  dlg.addEventListener('cancel', ev => { ev.preventDefault(); fecharPainel(); });   // tecla Esc também desliza
+
+  /* ------------------------------------------------------------------
+     Sacola (botão no topo)
+     ------------------------------------------------------------------ */
+  const ICONE_LIXEIRA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7M6.5 7l.8 11.3A1.8 1.8 0 0 0 9.1 20h5.8a1.8 1.8 0 0 0 1.8-1.7L17.5 7"/></svg>';
+
+  function renderSacola() {
+    if (!E.cfg) return;
+    const nums = [...E.sel].sort((a, b) => a - b);
+    const q = nums.length, v = E.cfg.valor_numero;
+    el.sacolaVazia.hidden = q > 0;
+    el.sacolaTotais.hidden = q === 0;
+    el.sacolaLista.innerHTML = nums.map(n => `<li data-n="${n}">
+        <span class="mini">${n}</span>
+        <span class="si-info"><b>Número ${n}</b><small>Bilhete da rifa</small></span>
+        <span class="si-valor">${brl(v)}</span>
+        <button type="button" class="si-tirar" data-tirar="${n}" aria-label="Tirar o número ${n}">${ICONE_LIXEIRA}</button>
+      </li>`).join('');
+    el.sacolaConta.textContent = q ? `${plural(q, '1 número', '# números')} × ${brl(v)}` : '';
+    el.sacolaSubtotal.textContent = brl(q * v);
+    el.sacolaTotal.textContent = brl(q * v);
+    el.sacolaNota.textContent = q ? `No próximo passo você informa seus dados e os números ficam guardados por ${E.cfg.prazo_reserva_minutos} minutos para o pagamento.` : '';
+    el.btnSacolaContinuar.disabled = !q || !vendaAberta();
+    el.btnSacolaContinuar.textContent = vendaAberta() ? 'Continuar' : 'Vendas fechadas no momento';
+  }
+
+  function abrirSacola() {
+    if (!E.cfg) return;
+    E.pedido = null;
+    renderSacola();
+    mostrarEtapa('sacola');
+    abrirPainel();
+    carregarQr().catch(() => {});
   }
 
   function abrirCheckout() {
@@ -568,14 +632,16 @@
     E.pedido = null;
     mostrarEtapa('dados');
     abrirPainel();
-    setTimeout(() => ($('#fNome').value ? $('#btnConfirmar') : $('#fNome')).focus(), 60);
+    setTimeout(() => ($('#fNome').value ? $('#btnConfirmar') : $('#fNome')).focus({ preventScroll: true }), 320);
   }
 
   function montarResumoSelecao() {
     const nums = [...E.sel].sort((a, b) => a - b);
+    const mostrar = nums.slice(0, 8), resto = nums.length - mostrar.length;
     $('#ckResumo').innerHTML =
-      `<p><strong>${plural(nums.length, '1 número', '# números')}</strong>, total de <strong>${brl(nums.length * E.cfg.valor_numero)}</strong></p>` +
-      `<div class="linha-bilhetes">${nums.map(n => `<span class="mini">${n}</span>`).join('')}</div>`;
+      `<div><p><strong>${plural(nums.length, '1 número', '# números')}</strong>, total de <strong>${brl(nums.length * E.cfg.valor_numero)}</strong></p>` +
+      `<div class="linha-bilhetes">${mostrar.map(n => `<span class="mini">${n}</span>`).join('')}${resto > 0 ? `<span class="mini">+${resto}</span>` : ''}</div></div>` +
+      `<button type="button" class="btn-link" data-acao="editar">Editar</button>`;
   }
 
   /* máscara simples de telefone */
@@ -1078,6 +1144,19 @@
     $('#btnCarrinhoAbrir').setAttribute('aria-expanded', String(aberto));
   });
   $('#btnReservar').addEventListener('click', abrirCheckout);
+  el.btnSacola.addEventListener('click', abrirSacola);
+  el.btnSacolaContinuar.addEventListener('click', () => {
+    if (!E.sel.size) return;
+    if (!vendaAberta()) { toast(MSG_FECHADA[E.statusRifa] || 'As vendas não estão abertas.'); return; }
+    abrirCheckout();
+  });
+  el.sacolaLista.addEventListener('click', e => {
+    const b = e.target.closest('[data-tirar]');
+    if (!b) return;
+    const n = Number(b.dataset.tirar);
+    E.sel.delete(n); pintar(n - E.ini);
+    atualizarCarrinho();                     // já redesenha a sacola aberta
+  });
 
   $('#fTel').addEventListener('input', e => { e.target.value = formatarTel(e.target.value); });
   $('#formDados').addEventListener('input', e => {        // some com o aviso do campo assim que a pessoa corrige
@@ -1112,6 +1191,8 @@
     if (!alvo) return;
     if (alvo.hasAttribute('data-copiar-link')) {
       if (E.pedido && E.token) toast((await copiar(linkPedido(E.pedido.pedido_id, E.token))) ? 'Link do pedido copiado. Guarde em lugar seguro.' : 'Não consegui copiar o link.');
+    } else if (alvo.dataset.acao === 'editar') {
+      renderSacola(); mostrarEtapa('sacola');
     } else if (alvo.dataset.acao === 'fechar') {
       fecharPainel();
     } else if (alvo.dataset.acao === 'reenviar') {
