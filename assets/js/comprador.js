@@ -98,6 +98,8 @@
    'sacolaTotais', 'sacolaConta', 'sacolaSubtotal', 'sacolaTotal', 'sacolaNota', 'btnSacolaContinuar', 'ckCabTitulo',
    'passos'].forEach(id => { el[id] = document.getElementById(id); });
   el.sorte = document.querySelector('.ferramentas .sorte');
+  el.sorteioData = document.getElementById('sorteioData');
+  el.sorteioFalta = document.getElementById('sorteioFalta');
 
   /* Se o index.html e este arquivo forem de versões diferentes (envio parcial
      ou cache antigo), avisa com clareza em vez de quebrar no meio. */
@@ -284,6 +286,72 @@
       a.hidden = false;
     }
     $('#irPara').min = c.numero_inicial; $('#irPara').max = c.numero_final;
+    montarPremio();
+    montarDataSorteio();
+  }
+
+  /* ------------------------------------------------------------------
+     Prêmio e data do sorteio (campos da aba CONFIG)
+     ------------------------------------------------------------------ */
+  function montarPremio() {
+    const c = E.cfg, box = $('#premio');
+    const tem = !!c.premio;
+    box.hidden = !tem;
+    $('#abertura').classList.toggle('com-premio', tem);
+    if (!tem) return;
+    $('#premioNome').textContent = c.premio;
+    $('#premioDesc').textContent = c.premio_descricao || '';
+    const outros = c.outros_premios || [];
+    const po = $('#premioOutros');
+    po.hidden = !outros.length;
+    if (outros.length) {
+      po.innerHTML = (outros.length === 1 ? '<b>Também sorteado:</b> ' : '<b>Também sorteados:</b> ') + outros.map(esc).join(', ');
+    }
+    const img = $('#premioImg');
+    img.alt = 'Foto do prêmio: ' + c.premio;
+    if (c.premio_imagem) {
+      if (img.getAttribute('src') !== c.premio_imagem) {
+        box.classList.remove('tem-foto');
+        img.onload = () => box.classList.add('tem-foto');
+        img.onerror = () => box.classList.remove('tem-foto');   // foto fora do ar: fica o ícone de presente
+        img.src = c.premio_imagem;
+        if (img.complete && img.naturalWidth) box.classList.add('tem-foto');
+      }
+    } else {
+      img.removeAttribute('src');
+      box.classList.remove('tem-foto');
+    }
+  }
+
+  const DIAS = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
+  function formatarDataSorteio(d) {
+    const dd = String(d.getDate()).padStart(2, '0'), mm = String(d.getMonth() + 1).padStart(2, '0');
+    const h = d.getHours(), min = d.getMinutes();
+    return `${DIAS[d.getDay()]} ${dd}/${mm} às ${h}h${min ? String(min).padStart(2, '0') : ''}`;
+  }
+  function textoFalta(ms) {
+    if (ms <= 0) return E.statusRifa === 'SORTEADA' ? 'O resultado já saiu' : 'Acontecendo agora';
+    const min = Math.floor(ms / 60000), h = Math.floor(min / 60), d = Math.floor(h / 24);
+    if (d >= 2) return `faltam ${d} dias`;
+    if (d === 1) return `falta 1 dia e ${h - 24}h`;
+    if (h >= 1) return `faltam ${h}h ${String(min % 60).padStart(2, '0')}min`;
+    return min <= 1 ? 'falta 1 minuto' : `faltam ${min} minutos`;
+  }
+  function montarDataSorteio() {
+    const box = el.sorteioData;
+    const iso = E.cfg.data_sorteio;
+    clearInterval(E.timers.dataSorteio);
+    box.hidden = !iso;
+    if (!iso) return;
+    const quando = new Date(iso);
+    $('#sorteioQuando').textContent = 'Sorteio ' + formatarDataSorteio(quando);
+    const atualizar = () => {
+      const falta = quando.getTime() - agoraServidor();
+      el.sorteioFalta.textContent = textoFalta(falta);
+      box.classList.toggle('passou', falta <= 0);
+    };
+    atualizar();
+    E.timers.dataSorteio = setInterval(atualizar, 30000);   // minuto a minuto basta
   }
 
   function linkWhats(texto) {
@@ -498,6 +566,7 @@
     }
     el.btnReservar.disabled = !q || !vendaAberta();
     el.carrinho.classList.toggle('tem', q > 0);
+    document.body.classList.toggle('com-selecao', q > 0);   // no celular, a barra só aparece com números escolhidos
     if (!q) { el.carrinho.classList.remove('aberto'); el.btnCarrinhoAbrir.setAttribute('aria-expanded', 'false'); }
     el.carrinhoVazio.hidden = q > 0;
     el.btnLimpar.hidden = q < 2;
@@ -598,7 +667,7 @@
     el.sacolaTotais.hidden = q === 0;
     el.sacolaLista.innerHTML = nums.map(n => `<li data-n="${n}">
         <span class="mini">${n}</span>
-        <span class="si-info"><b>Número ${n}</b><small>Bilhete da rifa</small></span>
+        <span class="si-info"><b>Número ${n}</b><small>${esc(legendaBilhete())}</small></span>
         <span class="si-valor">${brl(v)}</span>
         <button type="button" class="si-tirar" data-tirar="${n}" aria-label="Tirar o número ${n}">${ICONE_LIXEIRA}</button>
       </li>`).join('');
@@ -608,6 +677,13 @@
     el.sacolaNota.textContent = q ? `No próximo passo você informa seus dados e os números ficam guardados por ${E.cfg.prazo_reserva_minutos} minutos para o pagamento.` : '';
     el.btnSacolaContinuar.disabled = !q || !vendaAberta();
     el.btnSacolaContinuar.textContent = vendaAberta() ? 'Continuar' : 'Vendas fechadas no momento';
+  }
+
+  function legendaBilhete() {
+    const c = E.cfg;
+    if (c.premio && (c.outros_premios || []).length) return 'Concorre a todos os prêmios';
+    if (c.premio) return 'Concorre a: ' + c.premio;
+    return 'Bilhete da rifa';
   }
 
   function abrirSacola() {
